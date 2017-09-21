@@ -2,22 +2,18 @@
     "timeout": 1000,
     "xSlots": {
         "1": {
-            "placementId": "54321",
-            "sizes": [
-                [300, 250]
-            ]
+            "zoneId": 1163,
+            "exclude" : ["wp"],
+            "sizes" : [[1,1]]
         },
         "2": {
-            "placementId": "12345",
-            "sizes": [
-                [300, 600]
-            ]
+            "zoneId": 1163,
+            "allow": ["wp"],
+            "sizes" : [[1,1]]
         },
         "3": {
-            "placementId": "654321",
-            "sizes": [
-                [728, 90]
-            ]
+            "zoneId": 1163,
+            "sizes" : [[1,1]]
         }
     },
     "mapping": {

@@ -23,6 +23,21 @@ var libraryStubData = {
         },
         getLanguage: function () {
             return 'en-US';
+        },
+        getScreenHeight: function() {
+          return 1024;
+        },
+        getScreenWidth: function() {
+          return 1920;
+        },
+        getViewportHeight: function() {
+          return 1024;
+        },
+        getViewportWidth: function() {
+          return 1920;
+        },
+        getHostname: function() {
+          return 'localhost';
         }
     },
     'classify.js': {
@@ -76,7 +91,11 @@ var libraryStubData = {
             return adm;
         },
     },
-    'utilities.js': {},
+    'utilities.js': {
+        deepCopy : function (obj) {
+            return JSON.parse(JSON.stringify(obj));
+        }
+    },
     'whoopsie.js': function () {
         return null;
     },

@@ -12,8 +12,7 @@
   },
   "author": "Index Exchange",
   "license": "UNLICENSED",
-  "devDependencies": {
-  },
+  "devDependencies": {},
   "dependencies": {
     "jasmine": "^2.6.0",
     "chai": "^4.0.2",

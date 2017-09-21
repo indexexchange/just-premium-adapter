@@ -73,7 +73,6 @@ describe('parseResponse', function () {
     var partnerProfile = partnerModule.profile;
 
     /* Generate dummy return parcels based on MRA partner profile */
-    var returnParcels;
     var result, expectedValue, mockData, returnParcels;
 
     describe('should correctly parse bids:', function () {
@@ -88,9 +87,6 @@ describe('parseResponse', function () {
             if (partnerProfile.architecture) partnerModule.parseResponse(1, mockData, returnParcels);
 
             for (var i = 0; i < returnParcels.length; i++) {
-
-                /* IF MRA, parse one parcel at a time */
-                if (!partnerProfile.architecture) partnerModule.parseResponse(1, mockData[i], [returnParcels[i]]);
 
                 var result = inspector.validate({
                     type: 'object',
@@ -151,18 +147,15 @@ describe('parseResponse', function () {
             /* IF SRA, parse all parcels at once */
             if (partnerProfile.architecture) partnerModule.parseResponse(1, mockData, returnParcels);
 
+            var order = [2,1,0];
+
             for (var i = 0; i < returnParcels.length; i++) {
 
-                /* IF MRA, parse one parcel at a time */
-                if (!partnerProfile.architecture) partnerModule.parseResponse(1, mockData[i], [returnParcels[i]]);
-
-                /* Add test cases to test against each of the parcel's set fields
-                 * to make sure the response was parsed correctly.
-                 *
-                 * The parcels have already been parsed and should contain all the
-                 * necessary demand.
-                 */
-
+                var bid = mockData['1163'][order[i]];
+                expect(returnParcels[i].price).to.be.equal(bid.price);
+                expect(returnParcels[i].adm).to.be.equal(bid.adm);
+                expect(returnParcels[i].size[0]).to.be.equal(bid.width);
+                expect(returnParcels[i].size[1]).to.be.equal(bid.height);
                 expect(returnParcels[i]).to.exist;
             }
         });
@@ -170,7 +163,6 @@ describe('parseResponse', function () {
     });
 
     describe('should correctly parse passes: ', function () {
-
 
         it('each parcel should have the required fields set', function () {
             returnParcels = generateReturnParcels(partnerModule.profile, partnerConfig);
@@ -182,9 +174,6 @@ describe('parseResponse', function () {
             if (partnerProfile.architecture) partnerModule.parseResponse(1, mockData, returnParcels);
 
             for (var i = 0; i < returnParcels.length; i++) {
-
-                /* IF MRA, parse one parcel at a time */
-                if (!partnerProfile.architecture) partnerModule.parseResponse(1, mockData[i], [returnParcels[i]]);
 
                 var result = inspector.validate({
                     type: 'object',
@@ -213,16 +202,7 @@ describe('parseResponse', function () {
 
             for (var i = 0; i < returnParcels.length; i++) {
 
-                /* IF MRA, parse one parcel at a time */
-                if (!partnerProfile.architecture) partnerModule.parseResponse(1, mockData[i], [returnParcels[i]]);
-
-                /* Add test cases to test against each of the parcel's set fields
-                 * to make sure the response was parsed correctly.
-                 *
-                 * The parcels have already been parsed and should contain all the
-                 * necessary demand.
-                 */
-
+                expect(returnParcels[i].pass).to.be.true;
                 expect(returnParcels[i]).to.exist;
             }
         });
@@ -242,9 +222,6 @@ describe('parseResponse', function () {
             if (partnerProfile.architecture) partnerModule.parseResponse(1, mockData, returnParcels);
 
             for (var i = 0; i < returnParcels.length; i++) {
-
-                /* IF MRA, parse one parcel at a time */
-                if (!partnerProfile.architecture) partnerModule.parseResponse(1, mockData[i], [returnParcels[i]]);
 
                 var result = inspector.validate({
                     type: 'object',
@@ -290,12 +267,12 @@ describe('parseResponse', function () {
                             type: 'number'
                         },
                         size: {
-                            type: 'array',
+                            type: 'array'
                         },
                         adm: {
                             type: 'string',
                             minLength: 1
-                        },
+                        }
                     }
                 }, returnParcels[i]);
 
@@ -313,18 +290,15 @@ describe('parseResponse', function () {
             /* IF SRA, parse all parcels at once */
             if (partnerProfile.architecture) partnerModule.parseResponse(1, mockData, returnParcels);
 
+            var order = [2,1,0];
+
             for (var i = 0; i < returnParcels.length; i++) {
 
-                /* IF MRA, parse one parcel at a time */
-                if (!partnerProfile.architecture) partnerModule.parseResponse(1, mockData[i], [returnParcels[i]]);
-
-                /* Add test cases to test against each of the parcel's set fields
-                 * to make sure the response was parsed correctly.
-                 *
-                 * The parcels have already been parsed and should contain all the
-                 * necessary demand.
-                 */
-
+                var bid = mockData['1163'][order[i]];
+                expect(returnParcels[i].price).to.be.equal(bid.price);
+                expect(returnParcels[i].adm).to.be.equal(bid.adm);
+                expect(returnParcels[i].size[0]).to.be.equal(bid.width);
+                expect(returnParcels[i].size[1]).to.be.equal(bid.height);
                 expect(returnParcels[i]).to.exist;
             }
         });

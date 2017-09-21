@@ -18,6 +18,8 @@ function Partner(profile, configs, requiredResources, fns) {
      * ---------------------------------- */
 
     return {
+        // needed to pass all tests
+        _emitStatsEvent :function () {},
         _configs: _configs
     };
 }

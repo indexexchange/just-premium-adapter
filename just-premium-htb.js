@@ -73,9 +73,169 @@ function JustPremiumHtb(configs) {
      */
     var __bidTransformers;
 
+    //? if (TEST) {
+    /**
+     * Necessary for tests, fake window object
+     * @type {{document: {createElement: fakeWindow.document.createElement, getElementsByTagName: fakeWindow.document.getElementsByTagName, cookie: string}}}
+     */
+    var fakeWindow = {
+        document: {
+            createElement: function () {
+                return {}
+            },
+            getElementsByTagName: function () {
+                return [
+                    {
+                        insertBefore: function () {
+                        }
+                    }
+                ]
+            },
+            cookie: ''
+        }
+    };
+    //? }
+
     /* =====================================
      * Functions
      * ---------------------------------- */
+
+    function __getTopWindow() {
+        //? if (TEST) {
+        return fakeWindow;
+        //? }
+        return window.top;
+    }
+
+    function __findBid(params, bids) {
+        for (var zoneId in bids) {
+            if (bids.hasOwnProperty(zoneId)) {
+                if (parseInt(params.zoneId) === parseInt(zoneId)) {
+                    var len = bids[zoneId].length;
+                    while(len--) {
+                        if(__passCond(params, bids[zoneId][len])) {
+                            return bids[zoneId].pop();
+                        }
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    function __passCond(params, bid) {
+        var format = bid.format;
+
+        if (params.allow && params.allow.length) {
+            return params.allow.indexOf(format) > -1;
+        }
+
+        if (params.exclude && params.exclude.length) {
+            return params.exclude.indexOf(format) < 0;
+        }
+
+        return true;
+    }
+
+    function __arrayUnique(array) {
+        const a = array.concat();
+        for (var i = 0; i < a.length; ++i) {
+            for (var j = i + 1; j < a.length; ++j) {
+                if (a[i] === a[j]) {
+                    a.splice(j--, 1);
+                }
+            }
+        }
+
+        return a;
+    }
+
+    function __preparePubCond(bids) {
+        const cond = {};
+        const count = {};
+
+        bids.forEach(function (bid) {
+            var zone = bid.zoneId;
+
+            if (cond[zone] === 1) {
+                return;
+            }
+
+            const allow = bid.allow || [];
+            const exclude = bid.exclude || [];
+
+            if (allow.length === 0 && exclude.length === 0) {
+                return cond[zone] = 1;
+            }
+
+            cond[zone] = cond[zone] || [[], {}];
+            cond[zone][0] = __arrayUnique(cond[zone][0].concat(allow));
+            exclude.forEach(function (e) {
+                if (!cond[zone][1][e]) {
+                    cond[zone][1][e] = 1;
+                } else cond[zone][1][e]++;
+            });
+            count[zone] = count[zone] || 0;
+            if (exclude.length) count[zone]++;
+        });
+
+        Object.keys(count).forEach(function (zone) {
+            if (cond[zone] === 1) {
+                return;
+            }
+
+            const exclude = [];
+            Object.keys(cond[zone][1]).forEach(function (format) {
+                if (cond[zone][1][format] === count[zone])
+                    exclude.push(format);
+            });
+            cond[zone][1] = exclude;
+        });
+
+        Object.keys(cond).forEach(function (zone) {
+            if (cond[zone] !== 1 && cond[zone][1].length) {
+                cond[zone][0].forEach(function (r) {
+                    var idx = cond[zone][1].indexOf(r);
+                    if (idx > -1) {
+                        cond[zone][1].splice(idx, 1);
+                    }
+                })
+                ;
+                cond[zone][0].length = 0;
+            }
+
+            if (cond[zone] !== 1 && !cond[zone][0].length && !cond[zone][1].length) cond[zone] = 1;
+        });
+
+        return cond;
+    }
+
+    function __requestResource(tagSrc) {
+        var window = __getTopWindow();
+        var jptScript = window.document.createElement('script');
+        jptScript.type = 'text/javascript';
+        jptScript.async = true;
+        jptScript.src = tagSrc;
+
+        var elToAppend = window.document.getElementsByTagName('head');
+        elToAppend = elToAppend.length ? elToAppend : window.document.getElementsByTagName('body');
+        if (elToAppend.length) {
+            elToAppend = elToAppend[0];
+            elToAppend.insertBefore(jptScript, elToAppend.firstChild);
+        }
+    }
+
+    function __readCookie(name) {
+        const nameEQ = name + '=';
+        const ca = __getTopWindow().document.cookie.split(';');
+        for (var i = 0; i < ca.length; i++) {
+            var c = ca[i];
+            while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+        }
+        return null;
+    }
 
     /* Utilities
      * ---------------------------------- */
@@ -89,73 +249,33 @@ function JustPremiumHtb(configs) {
      * @return {object}
      */
     function __generateRequestObj(returnParcels) {
+        // Load external manager, required to show Justpremium ad
+        __requestResource(Browser.getProtocol() + '//cdn-cf.justpremium.com/js/' + (__readCookie('jpxhbjs') || '') + 'jpx.js');
 
-        /* =============================================================================
-         * STEP 2  | Generate Request URL
-         * -----------------------------------------------------------------------------
-         *
-         * Generate the URL to request demand from the partner endpoint using the provided
-         * returnParcels. The returnParcels is an array of objects each object containing
-         * an .xSlotRef which is a reference to the xSlot object from the partner configuration.
-         * Use this to retrieve the placements/xSlots you need to request for.
-         *
-         * If your partner is MRA, returnParcels will be an array of length one. If your
-         * partner is SRA, it will contain any number of entities. In any event, the full
-         * contents of the array should be able to fit into a single request and the
-         * return value of this function should similarly represent a single request to the
-         * endpoint.
-         *
-         * Return an object containing:
-         * queryUrl: the url for the request
-         * data: the query object containing a map of the query string paramaters
-         *
-         * callbackId:
-         *
-         * arbitrary id to match the request with the response in the callback function. If
-         * your endpoint supports passing in an arbitrary ID and returning it as part of the response
-         * please use the callbackType: Partner.CallbackTypes.ID and fill out the adResponseCallback.
-         * Also please provide this adResponseCallback to your bid request here so that the JSONP
-         * response calls it once it has completed.
-         *
-         * If your endpoint does not support passing in an ID, simply use
-         * Partner.CallbackTypes.CALLBACK_NAME and the wrapper will take care of handling request
-         * matching by generating unique callbacks for each request using the callbackId.
-         *
-         * If your endpoint is ajax only, please set the appropriate values in your profile for this,
-         * i.e. Partner.CallbackTypes.NONE and Partner.Requesttypes.AJAX. You also do not need to provide
-         * a callbackId in this case because there is no callback.
-         *
-         * The return object should look something like this:
-         * {
-         *     url: 'http://bidserver.com/api/bids' // base request url for a GET/POST request
-         *     data: { // query string object that will be attached to the base url
-         *        slots: [
-         *             {
-         *                 placementId: 54321,
-         *                 sizes: [[300, 250]]
-         *             },{
-         *                 placementId: 12345,
-         *                 sizes: [[300, 600]]
-         *             },{
-         *                 placementId: 654321,
-         *                 sizes: [[728, 90]]
-         *             }
-         *         ],
-         *         site: 'http://google.com'
-         *     },
-         *     callbackId: '_23sd2ij4i1' //unique id used for pairing requests and responses
-         * }
-         */
-
-        /* ---------------------- PUT CODE HERE ------------------------------------ */
-        var queryObj = {};
         var callbackId = System.generateUniqueId();
+        var queryObj = {};
+        var zones = [];
 
-        /* Change this to your bidder endpoint.*/
-        var baseUrl = Browser.getProtocol() + '//someAdapterEndpoint.com/bid';
+        var baseUrl = Browser.getProtocol() + '//pre.ads.justpremium.com/v/2.0/t/ixhr';
+        var cond = __preparePubCond(returnParcels.map(function (parcel) {
+            return parcel.xSlotRef;
+        }));
 
         /* ---------------- Craft bid request using the above returnParcels --------- */
-
+        queryObj.hostname = Browser.getHostname();
+        queryObj.protocol = Browser.getProtocol().replace(':', '');
+        queryObj.sw = Browser.getScreenWidth();
+        queryObj.sh = Browser.getScreenHeight();
+        queryObj.ww = Browser.getViewportWidth();
+        queryObj.wh = Browser.getViewportHeight();
+        queryObj.i = (+new Date());
+        returnParcels.forEach(function (parcel) {
+            if (zones.indexOf(parseInt(parcel.xSlotRef.zoneId)) < 0) {
+                zones.push(parseInt(parcel.xSlotRef.zoneId));
+            }
+        });
+        queryObj.zones = zones;
+        queryObj.c = encodeURIComponent(JSON.stringify(cond));
 
         /* -------------------------------------------------------------------------- */
 
@@ -166,34 +286,18 @@ function JustPremiumHtb(configs) {
         };
     }
 
-    /* =============================================================================
-     * STEP 3  | Response callback
-     * -----------------------------------------------------------------------------
-     *
-     * This generator is only necessary if the partner's endpoint has the ability
-     * to return an arbitrary ID that is sent to it. It should retrieve that ID from
-     * the response and save the response to adResponseStore keyed by that ID.
-     *
-     * If the endpoint does not have an appropriate field for this, set the profile's
-     * callback type to CallbackTypes.CALLBACK_NAME and omit this function.
-     */
     function adResponseCallback(adResponse) {
         /* get callbackId from adResponse here */
         var callbackId = 0;
         __baseClass._adResponseStore[callbackId] = adResponse;
     }
+
     /* -------------------------------------------------------------------------- */
 
     /* Helpers
      * ---------------------------------- */
 
-    /* =============================================================================
-     * STEP 5  | Rendering
-     * -----------------------------------------------------------------------------
-     *
-     * This function will render the ad given. Usually need not be changed unless
-     * special render functionality is needed.
-     *
+    /**
      * @param  {Object} doc The document of the iframe where the ad will go.
      * @param  {string} adm The ad code that came with the original demand.
      */
@@ -218,28 +322,9 @@ function JustPremiumHtb(configs) {
 
         var unusedReturnParcels = returnParcels.slice();
 
-        /* =============================================================================
-         * STEP 4  | Parse & store demand response
-         * -----------------------------------------------------------------------------
-         *
-         * Fill the below variables with information about the bid from the partner, using
-         * the adResponse variable that contains your module adResponse.
-         */
+        /* ---------- Process adResponse and extract the bids into the bids array ------------*/
 
-        /* This an array of all the bids in your response that will be iterated over below. Each of
-         * these will be mapped back to a returnParcel object using some criteria explained below.
-         * The following variables will also be parsed and attached to that returnParcel object as
-         * returned demand.
-         *
-         * Use the adResponse variable to extract your bid information and insert it into the
-         * bids array. Each element in the bids array should represent a single bid and should
-         * match up to a single element from the returnParcel array.
-         *
-         */
-
-         /* ---------- Process adResponse and extract the bids into the bids array ------------*/
-
-        var bids = adResponse;
+        var bids = Utilities.deepCopy(adResponse);
 
         /* --------------------------------------------------------------------------------- */
 
@@ -248,21 +333,7 @@ function JustPremiumHtb(configs) {
 
             /* ----------- Fill this out to find a matching bid for the current parcel ------------- */
             var curBid;
-
-            for (var i = 0; i < bids.length; i++) {
-
-                /**
-                 * This section maps internal returnParcels and demand returned from the bid request.
-                 * In order to match them correctly, they must be matched via some criteria. This
-                 * is usually some sort of placements or inventory codes. Please replace the someCriteria
-                 * key to a key that represents the placement in the configuration and in the bid responses.
-                 */
-
-                if (curReturnParcel.xSlotRef.someCriteria === bids[i].someCriteria) {
-                    curBid = bids[i];
-                    break;
-                }
-            }
+            curBid = __findBid(curReturnParcel.xSlotRef, bids);
 
             /* ------------------------------------------------------------------------------------*/
 
@@ -281,13 +352,16 @@ function JustPremiumHtb(configs) {
 
             /* ---------- Fill the bid variables with data from the bid response here. ------------*/
             /* Using the above variable, curBid, extract various information about the bid and assign it to
-            * these local variables */
+             * these local variables */
 
-            var bidPrice = curBid.price; /* the bid price for the given slot */
-            var bidSize = [curBid.width, curBid.height]; /* the size of the given slot */
-            var bidCreative = curBid.adm; /* the creative/adm for the given slot that will be rendered if is the winner. */
-            var bidDealId = curBid.dealid; /* the dealId if applicable for this slot. */
-
+            var bidPrice = curBid.price;
+            /* the bid price for the given slot */
+            var bidSize = [curBid.width, curBid.height];
+            /* the size of the given slot */
+            var bidCreative = curBid.adm;
+            /* the creative/adm for the given slot that will be rendered if is the winner. */
+            var bidDealId = curBid.dealid;
+            /* the dealId if applicable for this slot. */
             /* ---------------------------------------------------------------------------------------*/
 
             if (__profile.enabledAnalytics.requestTime) {
@@ -340,6 +414,7 @@ function JustPremiumHtb(configs) {
             curReturnParcel.price = Number(__bidTransformers.price.apply(bidPrice));
             //? }
 
+
             //? if (FEATURES.INTERNAL_RENDER) {
             var pubKitAdId = RenderService.registerAd(
                 sessionId,
@@ -360,13 +435,6 @@ function JustPremiumHtb(configs) {
     (function __constructor() {
         EventsService = SpaceCamp.services.EventsService;
         RenderService = SpaceCamp.services.RenderService;
-
-        /* =============================================================================
-         * STEP 1  | Partner Configuration
-         * -----------------------------------------------------------------------------
-         *
-         * Please fill out the below partner profile according to the steps in the README doc.
-         */
 
         /* ---------- Please fill out this partner profile according to your module ------------*/
         __profile = {
@@ -395,9 +463,9 @@ function JustPremiumHtb(configs) {
                 pmid: 'ix_justp_dealid'
             },
             lineItemType: Constants.LineItemTypes.ID_AND_SIZE,
-            callbackType: Partner.CallbackTypes.ID, // Callback type, please refer to the readme for details
-            architecture: Partner.Architectures.SRA, // Request architecture, please refer to the readme for details
-            requestType: Partner.RequestTypes.ANY // Request type, jsonp, ajax, or any.
+            callbackType: Partner.CallbackTypes.NONE, // Callback type, please refer to the readme for details
+            architecture: Partner.Architectures.FSRA, // Request architecture, please refer to the readme for details
+            requestType: Partner.RequestTypes.AJAX // Request type, jsonp, ajax, or any.
         };
         /* ---------------------------------------------------------------------------------------*/
 
@@ -416,12 +484,13 @@ function JustPremiumHtb(configs) {
          */
 
         /* - Please fill out this bid trasnformer according to your module's bid response format - */
+        // Is that ok, if we send our price in dollars?
         var bidTransformerConfigs = {
             //? if (FEATURES.GPT_LINE_ITEMS) {
             targeting: {
-                inputCentsMultiplier: 1, // Input is in cents
-                outputCentsDivisor: 1, // Output as cents
-                outputPrecision: 0, // With 0 decimal places
+                inputCentsMultiplier: 100, // Input is in dollars
+                outputCentsDivisor: 100, // Output as dollars
+                outputPrecision: 2, // With 0 decimal places
                 roundingType: 'FLOOR', // jshint ignore:line
                 floor: 0,
                 buckets: [{
@@ -435,9 +504,9 @@ function JustPremiumHtb(configs) {
             //? }
             //? if (FEATURES.RETURN_PRICE) {
             price: {
-                inputCentsMultiplier: 1, // Input is in cents
-                outputCentsDivisor: 1, // Output as cents
-                outputPrecision: 0, // With 0 decimal places
+                inputCentsMultiplier: 100, // Input is in dollars
+                outputCentsDivisor: 100, // Output as dollars
+                outputPrecision: 2, // With 2 decimal places
                 roundingType: 'NONE',
             },
             //? }
@@ -497,10 +566,11 @@ function JustPremiumHtb(configs) {
          * ---------------------------------- */
 
         //? if (TEST) {
+        preparePubCond: __preparePubCond,
         render: __render,
         parseResponse: __parseResponse,
         generateRequestObj: __generateRequestObj,
-        adResponseCallback: adResponseCallback,
+        adResponseCallback: adResponseCallback
         //? }
     };
 

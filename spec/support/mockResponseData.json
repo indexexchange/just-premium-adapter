@@ -1,5 +1,58 @@
 {
-    "bid": [],
-    "pass": [],
-    "deals": []
+  "bid": {
+    "1163": [
+      {
+        "height": 1,
+        "width": 1,
+        "price": 2.5,
+        "adm": "<script></script>",
+        "format" : "wp"
+      },
+      {
+        "height": 1,
+        "width": 1,
+        "price": 2.0,
+        "adm": "<script></script>",
+        "format" : "lb"
+      },
+      {
+        "height": 1,
+        "width": 1,
+        "price": 1.0,
+        "adm": "<script></script>",
+        "format" : "pa"
+      }
+    ]
+  },
+  "pass": {
+    "1163": true
+  },
+  "deals" : {
+    "1163": [
+      {
+        "height": 1,
+        "width": 1,
+        "price": 2.5,
+        "adm": "<script></script>",
+        "format" : "wp",
+        "dealId": 1111
+      },
+      {
+        "height": 1,
+        "width": 1,
+        "price": 2.0,
+        "adm": "<script></script>",
+        "format" : "lb",
+        "dealId": 1112
+      },
+      {
+        "height": 1,
+        "width": 1,
+        "price": 1.0,
+        "adm": "<script></script>",
+        "format" : "pa",
+        "dealId": 1113
+      }
+    ]
+  }
 }
