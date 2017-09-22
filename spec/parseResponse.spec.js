@@ -147,7 +147,7 @@ describe('parseResponse', function () {
             /* IF SRA, parse all parcels at once */
             if (partnerProfile.architecture) partnerModule.parseResponse(1, mockData, returnParcels);
 
-            var order = [2,1,0];
+            var order = [2,0,1];
 
             for (var i = 0; i < returnParcels.length; i++) {
 
@@ -290,7 +290,7 @@ describe('parseResponse', function () {
             /* IF SRA, parse all parcels at once */
             if (partnerProfile.architecture) partnerModule.parseResponse(1, mockData, returnParcels);
 
-            var order = [2,1,0];
+            var order = [2,0,1];
 
             for (var i = 0; i < returnParcels.length; i++) {
 

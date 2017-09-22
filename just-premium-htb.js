@@ -114,7 +114,7 @@ function JustPremiumHtb(configs) {
                     var len = bids[zoneId].length;
                     while(len--) {
                         if(__passCond(params, bids[zoneId][len])) {
-                            return bids[zoneId].pop();
+                            return bids[zoneId].splice(len, 1).pop();
                         }
                     }
                 }
