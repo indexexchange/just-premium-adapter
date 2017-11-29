@@ -220,7 +220,7 @@ Once you have filled this file out, you can continue actually writing your modul
 ### Step 1: Partner Configuration (`just-premium-htb.js`)
 This section involves setting up the general partner configuration such as name, default pricing strategy as well as the general format of incoming/outgoing bids for the adapter. Please read the following descriptions and update the `__profile` variable if necessary.
 
-* <u>partnerId</u> - This is simply the name of our module, generally if your module is a bidder the name will end with %%PartnerType%%. The format of the name should be PartnerName{Type}.
+* <u>partnerId</u> - This is simply the name of our module, generally if your module is a bidder the name will end with Htb. The format of the name should be PartnerName{Type}.
 * <u>namespace</u> - Should be the same as partnerId, it is the namespace that is used internally to store all of variables/functions related to your module, i.e. adResponseCallbacks.
 * <u>statsId</u> - A unique identifier used for analytics that will be provided for you.
 * <u>version</u> - If this is the first iteration of your module, please leave this field at 2.0.0.
