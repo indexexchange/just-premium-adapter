@@ -186,17 +186,17 @@ function JustPremiumHtb(configs) {
      *
      */
 
-     /**
+    /**
      * This function will render the pixel given.
      * @param  {string} pixelUrl Tracking pixel img url.
      */
     function __renderPixel(pixelUrl) {
-        if (pixelUrl){
+        if (pixelUrl) {
             Network.img({
                 url: decodeURIComponent(pixelUrl),
                 method: 'GET',
             });
-    }
+        }
     }
 
     /**
@@ -234,7 +234,7 @@ function JustPremiumHtb(configs) {
          *
          */
 
-         /* ---------- Process adResponse and extract the bids into the bids array ------------*/
+        /* ---------- Process adResponse and extract the bids into the bids array ------------*/
 
         var bids = adResponse;
 
@@ -280,7 +280,7 @@ function JustPremiumHtb(configs) {
             /* ---------- Fill the bid variables with data from the bid response here. ------------*/
 
             /* Using the above variable, curBid, extract various information about the bid and assign it to
-            * these local variables */
+             * these local variables */
 
             /* the bid price for the given slot */
             var bidPrice = curBid.price;
@@ -300,9 +300,9 @@ function JustPremiumHtb(configs) {
             var bidIsPass = bidPrice <= 0 ? true : false;
 
             /* OPTIONAL: tracking pixel url to be fired AFTER rendering a winning creative.
-            * If firing a tracking pixel is not required or the pixel url is part of the adm,
-            * leave empty;
-            */
+             * If firing a tracking pixel is not required or the pixel url is part of the adm,
+             * leave empty;
+             */
             var pixelUrl = '';
 
             /* ---------------------------------------------------------------------------------------*/
