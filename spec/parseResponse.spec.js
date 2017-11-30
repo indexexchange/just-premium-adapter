@@ -31,15 +31,17 @@ function generateReturnParcels(profile, partnerConfig) {
     for (var htSlotName in partnerConfig.mapping) {
         if (partnerConfig.mapping.hasOwnProperty(htSlotName)) {
             var xSlotsArray = partnerConfig.mapping[htSlotName];
+            var htSlot = {
+                id: htSlotName,
+                getId: function () {
+                    return this.id;
+                }
+            }
             for (var i = 0; i < xSlotsArray.length; i++) {
                 var xSlotName = xSlotsArray[i];
                 returnParcels.push({
                     partnerId: profile.partnerId,
-                    htSlot: {
-                        getId: function () {
-                            return htSlotName
-                        }
-                    },
+                    htSlot: htSlot,
                     ref: "",
                     xSlotRef: partnerConfig.xSlots[xSlotName],
                     requestId: '_' + Date.now()
@@ -264,7 +266,7 @@ describe('parseResponse', function () {
                                         minLength: 1
                                     }
                                 },
-                                [partnerModule.profile.targetingKeys.om]: {
+                                [partnerModule.profile.targetingKeys.pm]: {
                                     type: 'array',
                                     exactLength: 1,
                                     items: {
@@ -272,7 +274,7 @@ describe('parseResponse', function () {
                                         minLength: 1
                                     }
                                 },
-                                [partnerModule.profile.targetingKeys.pm]: {
+                                [partnerModule.profile.targetingKeys.pmid]: {
                                     type: 'array',
                                     exactLength: 1,
                                     items: {
