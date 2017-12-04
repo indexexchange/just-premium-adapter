@@ -159,6 +159,7 @@ describe('parseResponse', function () {
                 expect(returnParcels[i].size[0]).to.be.equal(bid.width);
                 expect(returnParcels[i].size[1]).to.be.equal(bid.height);
                 expect(returnParcels[i]).to.exist;
+
             }
         });
         /* -----------------------------------------------------------------------*/

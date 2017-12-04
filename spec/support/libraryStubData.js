@@ -19,11 +19,20 @@ var libraryStubData = {
         getLanguage: function () {
             return 'en-US';
         },
-        getScreenWidth: function () {
+        getScreenHeight: function() {
             return 1024;
         },
-        getScreenHeight: function () {
-            return 768;
+        getScreenWidth: function() {
+            return 1920;
+        },
+        getViewportHeight: function() {
+            return 1024;
+        },
+        getViewportWidth: function() {
+            return 1920;
+        },
+        getHostname: function() {
+            return 'localhost';
         },
         getPageUrl: function () {
             return 'http://www.indexexchange.com';
@@ -126,7 +135,11 @@ var libraryStubData = {
             return (new Date()).getTime();
         }
     },
-    'utilities.js': {},
+    'utilities.js': {
+        deepCopy : function (obj) {
+            return JSON.parse(JSON.stringify(obj));
+        }
+    },
     'whoopsie.js': function () {
         return null;
     },

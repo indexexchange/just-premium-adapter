@@ -66,13 +66,6 @@ function JustPremiumHtb(configs) {
      */
     var __profile;
 
-    /**
-     * Instances of BidTransformer for transforming bids.
-     *
-     * @private {object}
-     */
-    var __bidTransformers;
-
     //? if (TEST) {
     /**
      * Necessary for tests, fake window object
