@@ -102,7 +102,7 @@ describe('Partner Profile', function () {
                                 if (targetingSplit[0] !== 'ix' ||
                                     targetingSplit[1] !== profile.statsId.toLowerCase() ||
                                     targetingSplit[2] !== 'id') {
-                                    this.report('id tageting key should be of the format ix_{JUSTP}_id')
+                                    this.report('id tageting key should be of the format ix_justp_id')
                                 }
                             }
                         },
@@ -114,7 +114,7 @@ describe('Partner Profile', function () {
                                 if (targetingSplit[0] !== 'ix' ||
                                     targetingSplit[1] !== profile.statsId.toLowerCase() ||
                                     targetingSplit[2] !== 'cpm') {
-                                    this.report('om tageting key should be of the format ix_JUSTP_cpm')
+                                    this.report('om tageting key should be of the format ix_justp_cpm')
                                 }
                             }
                         },
@@ -126,7 +126,7 @@ describe('Partner Profile', function () {
                                 if (targetingSplit[0] !== 'ix' ||
                                     targetingSplit[1] !== profile.statsId.toLowerCase() ||
                                     targetingSplit[2] !== 'cpm') {
-                                    this.report('pm tageting key should be of the format ix_JUSTP_cpm')
+                                    this.report('pm tageting key should be of the format ix_justp_cpm')
                                 }
                             }
                         },
@@ -138,9 +138,18 @@ describe('Partner Profile', function () {
                                 if (targetingSplit[0] !== 'ix' ||
                                     targetingSplit[1] !== profile.statsId.toLowerCase() ||
                                     targetingSplit[2] !== 'dealid') {
-                                    this.report('pmid tageting key should be of the format ix_JUSTP_dealid')
+                                    this.report('pmid tageting key should be of the format ix_justp_dealid')
                                 }
                             }
+                        }
+                    }
+                },
+                bidUnitInCents: {
+                    type: 'number',
+                    gt: 0,
+                    exec: function (schema, post) {
+                        if ((post > 1 && post % 10 !== 0) || (post < 1 && !/^0\.0*1$/.test(post.toString()))) {
+                            this.report('bidUnitInCents should be a multiple of 10')
                         }
                     }
                 },
