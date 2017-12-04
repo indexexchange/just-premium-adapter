@@ -16,7 +16,6 @@
 // Dependencies ////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-var BidTransformer = require('bid-transformer.js');
 var Browser = require('browser.js');
 var Classify = require('classify.js');
 var Constants = require('constants.js');
@@ -24,6 +23,7 @@ var Partner = require('partner.js');
 var Size = require('size.js');
 var SpaceCamp = require('space-camp.js');
 var System = require('system.js');
+var Network = require('network.js');
 var Utilities = require('utilities.js');
 var EventsService;
 var RenderService;
@@ -112,8 +112,8 @@ function JustPremiumHtb(configs) {
             if (bids.hasOwnProperty(zoneId)) {
                 if (parseInt(params.zoneId) === parseInt(zoneId)) {
                     var len = bids[zoneId].length;
-                    while(len--) {
-                        if(__passCond(params, bids[zoneId][len])) {
+                    while (len--) {
+                        if (__passCond(params, bids[zoneId][len])) {
                             return bids[zoneId].splice(len, 1).pop();
                         }
                     }
@@ -286,6 +286,17 @@ function JustPremiumHtb(configs) {
         };
     }
 
+    /* =============================================================================
+     * STEP 3  | Response callback
+     * -----------------------------------------------------------------------------
+     *
+     * This generator is only necessary if the partner's endpoint has the ability
+     * to return an arbitrary ID that is sent to it. It should retrieve that ID from
+     * the response and save the response to adResponseStore keyed by that ID.
+     *
+     * If the endpoint does not have an appropriate field for this, set the profile's
+     * callback type to CallbackTypes.CALLBACK_NAME and omit this function.
+     */
     function adResponseCallback(adResponse) {
         /* get callbackId from adResponse here */
         var callbackId = 0;
@@ -297,12 +308,23 @@ function JustPremiumHtb(configs) {
     /* Helpers
      * ---------------------------------- */
 
-    /**
-     * @param  {Object} doc The document of the iframe where the ad will go.
-     * @param  {string} adm The ad code that came with the original demand.
+    /* =============================================================================
+     * STEP 5  | Rendering Pixel
+     * -----------------------------------------------------------------------------
+     *
      */
-    function __render(doc, adm) {
-        System.documentWrite(doc, adm);
+
+    /**
+     * This function will render the pixel given.
+     * @param  {string} pixelUrl Tracking pixel img url.
+     */
+    function __renderPixel(pixelUrl) {
+        if (pixelUrl) {
+            Network.img({
+                url: decodeURIComponent(pixelUrl),
+                method: 'GET',
+            });
+        }
     }
 
     /**
@@ -320,8 +342,6 @@ function JustPremiumHtb(configs) {
      */
     function __parseResponse(sessionId, adResponse, returnParcels) {
 
-        var unusedReturnParcels = returnParcels.slice();
-
         /* ---------- Process adResponse and extract the bids into the bids array ------------*/
 
         var bids = Utilities.deepCopy(adResponse);
@@ -329,17 +349,15 @@ function JustPremiumHtb(configs) {
         /* --------------------------------------------------------------------------------- */
 
         for (var j = 0; j < returnParcels.length; j++) {
-            var curReturnParcel = returnParcels[j];
 
-            /* ----------- Fill this out to find a matching bid for the current parcel ------------- */
+            var curReturnParcel = returnParcels[j];
             var curBid;
             curBid = __findBid(curReturnParcel.xSlotRef, bids);
 
-            /* ------------------------------------------------------------------------------------*/
-
-            /* HeaderStats information */
             var headerStatsInfo = {};
-            headerStatsInfo[curReturnParcel.htSlot.getId()] = [curReturnParcel.xSlotName];
+            var htSlotId = curReturnParcel.htSlot.getId();
+            headerStatsInfo[htSlotId] = {};
+            headerStatsInfo[htSlotId][curReturnParcel.requestId] = [curReturnParcel.xSlotName];
 
             /* No matching bid found so its a pass */
             if (!curBid) {
@@ -351,19 +369,25 @@ function JustPremiumHtb(configs) {
             }
 
             /* ---------- Fill the bid variables with data from the bid response here. ------------*/
-            /* Using the above variable, curBid, extract various information about the bid and assign it to
-             * these local variables */
 
             var bidPrice = curBid.price;
-            /* the bid price for the given slot */
-            var bidSize = [curBid.width, curBid.height];
-            /* the size of the given slot */
+            var bidSize = [Number(curBid.width), Number(curBid.height)];
             var bidCreative = curBid.adm;
-            /* the creative/adm for the given slot that will be rendered if is the winner. */
             var bidDealId = curBid.dealid;
-            /* the dealId if applicable for this slot. */
+            var bidIsPass = bidPrice <= 0;
+            var pixelUrl = '';
             /* ---------------------------------------------------------------------------------------*/
 
+            if (bidIsPass) {
+                //? if (DEBUG) {
+                Scribe.info(__profile.partnerId + ' returned pass for { id: ' + adResponse.id + ' }.');
+                //? }
+                if (__profile.enabledAnalytics.requestTime) {
+                    __baseClass._emitStatsEvent(sessionId, 'hs_slot_pass', headerStatsInfo);
+                }
+                curReturnParcel.pass = true;
+                continue;
+            }
             if (__profile.enabledAnalytics.requestTime) {
                 __baseClass._emitStatsEvent(sessionId, 'hs_slot_bid', headerStatsInfo);
             }
@@ -372,8 +396,10 @@ function JustPremiumHtb(configs) {
             curReturnParcel.targetingType = 'slot';
             curReturnParcel.targeting = {};
 
+            var targetingCpm = '';
+
             //? if (FEATURES.GPT_LINE_ITEMS) {
-            var targetingCpm = __bidTransformers.targeting.apply(bidPrice);
+            targetingCpm = __baseClass._bidTransformers.targeting.apply(bidPrice);
             var sizeKey = Size.arrayToString(curReturnParcel.size);
 
             if (bidDealId) {
@@ -383,27 +409,6 @@ function JustPremiumHtb(configs) {
                 curReturnParcel.targeting[__baseClass._configs.targetingKeys.om] = [sizeKey + '_' + targetingCpm];
             }
             curReturnParcel.targeting[__baseClass._configs.targetingKeys.id] = [curReturnParcel.requestId];
-
-            if (__baseClass._configs.lineItemType === Constants.LineItemTypes.ID_AND_SIZE) {
-                RenderService.registerAdByIdAndSize(
-                    sessionId,
-                    __profile.partnerId,
-                    __render, [bidCreative],
-                    '',
-                    __profile.features.demandExpiry.enabled ? (__profile.features.demandExpiry.value + System.now()) : 0,
-                    curReturnParcel.requestId, bidSize
-                );
-            } else if (__baseClass._configs.lineItemType === Constants.LineItemTypes.ID_AND_PRICE) {
-                RenderService.registerAdByIdAndPrice(
-                    sessionId,
-                    __profile.partnerId,
-                    __render, [bidCreative],
-                    '',
-                    __profile.features.demandExpiry.enabled ? (__profile.features.demandExpiry.value + System.now()) : 0,
-                    curReturnParcel.requestId,
-                    targetingCpm
-                );
-            }
             //? }
 
             //? if (FEATURES.RETURN_CREATIVE) {
@@ -411,20 +416,25 @@ function JustPremiumHtb(configs) {
             //? }
 
             //? if (FEATURES.RETURN_PRICE) {
-            curReturnParcel.price = Number(__bidTransformers.price.apply(bidPrice));
+            curReturnParcel.price = Number(__baseClass._bidTransformers.price.apply(bidPrice));
             //? }
 
+            var pubKitAdId = RenderService.registerAd({
+                sessionId: sessionId,
+                partnerId: __profile.partnerId,
+                adm: bidCreative,
+                requestId: curReturnParcel.requestId,
+                size: curReturnParcel.size,
+                price: bidDealId ? bidDealId : targetingCpm,
+                timeOfExpiry: __profile.features.demandExpiry.enabled ? (__profile.features.demandExpiry.value + System.now()) : 0,
+                auxFn: __renderPixel,
+                auxArgs: [pixelUrl]
+            });
 
             //? if (FEATURES.INTERNAL_RENDER) {
-            var pubKitAdId = RenderService.registerAd(
-                sessionId,
-                __profile.partnerId,
-                __render, [bidCreative],
-                '',
-                __profile.features.demandExpiry.enabled ? (__profile.features.demandExpiry.value + System.now()) : 0
-            );
             curReturnParcel.targeting.pubKitAdId = pubKitAdId;
             //? }
+
         }
     }
 
@@ -441,7 +451,7 @@ function JustPremiumHtb(configs) {
             partnerId: 'JustPremiumHtb', // PartnerName
             namespace: 'JustPremiumHtb', // Should be same as partnerName
             statsId: 'JUSTP', // Unique partner identifier
-            version: '2.0.0',
+            version: '2.1.0',
             targetingType: 'slot',
             enabledAnalytics: {
                 requestTime: true
@@ -462,6 +472,7 @@ function JustPremiumHtb(configs) {
                 pm: 'ix_justp_cpm',
                 pmid: 'ix_justp_dealid'
             },
+            bidUnitInCents: 1, // The bid price unit (in cents) the endpoint returns, please refer to the readme for details
             lineItemType: Constants.LineItemTypes.ID_AND_SIZE,
             callbackType: Partner.CallbackTypes.NONE, // Callback type, please refer to the readme for details
             architecture: Partner.Architectures.FSRA, // Request architecture, please refer to the readme for details
@@ -475,61 +486,6 @@ function JustPremiumHtb(configs) {
         if (results) {
             throw Whoopsie('INVALID_CONFIG', results);
         }
-        //? }
-
-        /*
-         * Adjust the below bidTransformerConfigs variable to match the units the adapter
-         * sends bids in and to match line item setup. This configuration variable will
-         * be used to transform the bids going into DFP.
-         */
-
-        /* - Please fill out this bid trasnformer according to your module's bid response format - */
-        // Is that ok, if we send our price in dollars?
-        var bidTransformerConfigs = {
-            //? if (FEATURES.GPT_LINE_ITEMS) {
-            targeting: {
-                inputCentsMultiplier: 100, // Input is in dollars
-                outputCentsDivisor: 100, // Output as dollars
-                outputPrecision: 2, // With 0 decimal places
-                roundingType: 'FLOOR', // jshint ignore:line
-                floor: 0,
-                buckets: [{
-                    max: 2000, // Up to 20 dollar (above 5 cents)
-                    step: 5 // use 5 cent increments
-                }, {
-                    max: 5000, // Up to 50 dollars (above 20 dollars)
-                    step: 100 // use 1 dollar increments
-                }]
-            },
-            //? }
-            //? if (FEATURES.RETURN_PRICE) {
-            price: {
-                inputCentsMultiplier: 100, // Input is in dollars
-                outputCentsDivisor: 100, // Output as dollars
-                outputPrecision: 2, // With 2 decimal places
-                roundingType: 'NONE',
-            },
-            //? }
-        };
-
-        /* --------------------------------------------------------------------------------------- */
-
-        if (configs.bidTransformer) {
-            //? if (FEATURES.GPT_LINE_ITEMS) {
-            bidTransformerConfigs.targeting = configs.bidTransformer;
-            //? }
-            //? if (FEATURES.RETURN_PRICE) {
-            bidTransformerConfigs.price.inputCentsMultiplier = configs.bidTransformer.inputCentsMultiplier;
-            //? }
-        }
-
-        __bidTransformers = {};
-
-        //? if (FEATURES.GPT_LINE_ITEMS) {
-        __bidTransformers.targeting = BidTransformer(bidTransformerConfigs.targeting);
-        //? }
-        //? if (FEATURES.RETURN_PRICE) {
-        __bidTransformers.price = BidTransformer(bidTransformerConfigs.price);
         //? }
 
         __baseClass = Partner(__profile, configs, null, {
@@ -567,7 +523,6 @@ function JustPremiumHtb(configs) {
 
         //? if (TEST) {
         preparePubCond: __preparePubCond,
-        render: __render,
         parseResponse: __parseResponse,
         generateRequestObj: __generateRequestObj,
         adResponseCallback: adResponseCallback

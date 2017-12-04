@@ -6,6 +6,8 @@
  *  window namespace here, but this is discouraged if it's not strictly needed.
  */
 
+//? if (FEATURES.GPT_LINE_ITEMS) {
 shellInterface.JustPremiumHtb = {
     render: SpaceCamp.services.RenderService.renderDfpAd.bind(null, 'JustPremiumHtb')
 };
+//? }
