@@ -47,16 +47,23 @@ var partnerValidator = function (configs) {
                                 type: 'integer'
                             },
                             allow: {
-                              type : 'array',
-                              optional: true,
-                              items: { type: "string", rules: ["trim"]}
+                                type: 'array',
+                                optional: true,
+                                items: {type: "string", rules: ["trim"]}
                             },
                             exclude: {
-                              type : 'array',
-                              optional: true,
-                              items: { type: "string", rules: ["trim"]}
+                                type: 'array',
+                                optional: true,
+                                items: {type: "string", rules: ["trim"]}
+                            },
+                            sizes: {
+                                type: 'array',
+                                optional: true,
+                                items: {
+                                    type: "array",
+                                    items: {type: "int"}
+                                }
                             }
-
                         }
                     }
                 }

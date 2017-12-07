@@ -66,39 +66,9 @@ function JustPremiumHtb(configs) {
      */
     var __profile;
 
-    //? if (TEST) {
-    /**
-     * Necessary for tests, fake window object
-     * @type {{document: {createElement: fakeWindow.document.createElement, getElementsByTagName: fakeWindow.document.getElementsByTagName, cookie: string}}}
-     */
-    var fakeWindow = {
-        document: {
-            createElement: function () {
-                return {}
-            },
-            getElementsByTagName: function () {
-                return [
-                    {
-                        insertBefore: function () {
-                        }
-                    }
-                ]
-            },
-            cookie: ''
-        }
-    };
-    //? }
-
     /* =====================================
      * Functions
      * ---------------------------------- */
-
-    function __getTopWindow() {
-        //? if (TEST) {
-        return fakeWindow;
-        //? }
-        return window.top;
-    }
 
     function __findBid(params, bids) {
         for (var zoneId in bids) {
@@ -205,7 +175,7 @@ function JustPremiumHtb(configs) {
     }
 
     function __requestResource(tagSrc) {
-        var window = __getTopWindow();
+        var window = Browser.topWindow;
         var jptScript = window.document.createElement('script');
         jptScript.type = 'text/javascript';
         jptScript.async = true;
@@ -221,7 +191,7 @@ function JustPremiumHtb(configs) {
 
     function __readCookie(name) {
         const nameEQ = name + '=';
-        const ca = __getTopWindow().document.cookie.split(';');
+        const ca = Browser.topWindow.document.cookie.split(';');
         for (var i = 0; i < ca.length; i++) {
             var c = ca[i];
             while (c.charAt(0) == ' ') c = c.substring(1, c.length);
@@ -249,7 +219,7 @@ function JustPremiumHtb(configs) {
         var queryObj = {};
         var zones = [];
 
-        var baseUrl = Browser.getProtocol() + '//pre.ads.justpremium.com/v/2.0/t/ixhr';
+        var baseUrl = Browser.getProtocol() + '//pre.ads.justpremium.com/v/2.0/t/ixhr?';
         var cond = __preparePubCond(returnParcels.map(function (parcel) {
             return parcel.xSlotRef;
         }));
@@ -267,7 +237,7 @@ function JustPremiumHtb(configs) {
                 zones.push(parseInt(parcel.xSlotRef.zoneId));
             }
         });
-        queryObj.zones = zones;
+        queryObj.zones = zones.join(',');
         queryObj.c = encodeURIComponent(JSON.stringify(cond));
 
         /* -------------------------------------------------------------------------- */
@@ -295,7 +265,6 @@ function JustPremiumHtb(configs) {
         var callbackId = 0;
         __baseClass._adResponseStore[callbackId] = adResponse;
     }
-
     /* -------------------------------------------------------------------------- */
 
     /* Helpers
@@ -427,7 +396,6 @@ function JustPremiumHtb(configs) {
             //? if (FEATURES.INTERNAL_RENDER) {
             curReturnParcel.targeting.pubKitAdId = pubKitAdId;
             //? }
-
         }
     }
 
@@ -465,7 +433,7 @@ function JustPremiumHtb(configs) {
                 pm: 'ix_justp_cpm',
                 pmid: 'ix_justp_dealid'
             },
-            bidUnitInCents: 1, // The bid price unit (in cents) the endpoint returns, please refer to the readme for details
+            bidUnitInCents: 100, // The bid price unit (in cents) the endpoint returns, please refer to the readme for details
             lineItemType: Constants.LineItemTypes.ID_AND_SIZE,
             callbackType: Partner.CallbackTypes.NONE, // Callback type, please refer to the readme for details
             architecture: Partner.Architectures.FSRA, // Request architecture, please refer to the readme for details
