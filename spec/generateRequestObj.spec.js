@@ -152,9 +152,7 @@ describe('generateRequestObj', function () {
                         minLength: 2
                     },
                     zones: {
-                        type: 'array',
-                        splitWith: ',',
-                        items: {type: 'number', min: 10}
+                        type: 'string'
                     },
                     i: {
                         type: 'integer',
