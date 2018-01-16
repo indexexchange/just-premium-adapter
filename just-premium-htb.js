@@ -219,7 +219,7 @@ function JustPremiumHtb(configs) {
         var queryObj = {};
         var zones = [];
 
-        var baseUrl = Browser.getProtocol() + '//pre.ads.justpremium.com/v/2.0/t/ixhr?';
+        var baseUrl = Browser.getProtocol() + '//pre.ads.justpremium.com/v/2.0/t/ixhr';
         var cond = __preparePubCond(returnParcels.map(function (parcel) {
             return parcel.xSlotRef;
         }));
