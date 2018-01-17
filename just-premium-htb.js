@@ -213,13 +213,18 @@ function JustPremiumHtb(configs) {
      */
     function __generateRequestObj(returnParcels) {
         // Load external manager, required to show Justpremium ad
-        __requestResource(Browser.getProtocol() + '//cdn-cf.justpremium.com/js/' + (__readCookie('jpxhbjs') || '') + 'jpx.js');
+        const jPAM = Browser.topWindow.top.jPAM = Browser.topWindow.jPAM || {};
+        if (!jPAM.requested) {
+            var jsVer = __readCookie('jpxhbjs');
+            __requestResource(Browser.getProtocol() + '//cdn-cf.justpremium.com/js/' + (jsVer ? jsVer + '/' : '') + 'jpx.js');
+            jPAM.requested = true;
+        }
 
         var callbackId = System.generateUniqueId();
         var queryObj = {};
         var zones = [];
 
-        var baseUrl = Browser.getProtocol() + '//pre.ads.justpremium.com/v/2.0/t/ixhr';
+        var baseUrl = Browser.getProtocol() + '//pre.ads.justpremium.com/v/2.0/t/ie';
         var cond = __preparePubCond(returnParcels.map(function (parcel) {
             return parcel.xSlotRef;
         }));
@@ -238,7 +243,7 @@ function JustPremiumHtb(configs) {
             }
         });
         queryObj.zones = zones.join(',');
-        queryObj.c = encodeURIComponent(JSON.stringify(cond));
+        queryObj.c = JSON.stringify(cond);
 
         /* -------------------------------------------------------------------------- */
 
@@ -313,6 +318,7 @@ function JustPremiumHtb(configs) {
         for (var j = 0; j < returnParcels.length; j++) {
 
             var curReturnParcel = returnParcels[j];
+            var sizes = curReturnParcel.xSlotRef.sizes;
             var curBid;
             curBid = __findBid(curReturnParcel.xSlotRef, bids);
 
@@ -333,7 +339,7 @@ function JustPremiumHtb(configs) {
             /* ---------- Fill the bid variables with data from the bid response here. ------------*/
 
             var bidPrice = curBid.price;
-            var bidSize = [Number(curBid.width), Number(curBid.height)];
+            var bidSize = sizes && sizes.length ? sizes[0] : [Number(curBid.width), Number(curBid.height)];
             var bidCreative = curBid.adm;
             var bidDealId = curBid.dealid;
             var bidIsPass = bidPrice <= 0;
