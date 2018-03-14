@@ -184,14 +184,14 @@ function JustPremiumHtb(configs) {
      * STEP 5  | Rendering Pixel
      * -----------------------------------------------------------------------------
      *
-     */
+    */
 
-    /**
+     /**
      * This function will render the pixel given.
      * @param  {string} pixelUrl Tracking pixel img url.
      */
     function __renderPixel(pixelUrl) {
-        if (pixelUrl) {
+        if (pixelUrl){
             Network.img({
                 url: decodeURIComponent(pixelUrl),
                 method: 'GET',
@@ -300,13 +300,14 @@ function JustPremiumHtb(configs) {
             var bidIsPass = bidPrice <= 0 ? true : false;
 
             /* OPTIONAL: tracking pixel url to be fired AFTER rendering a winning creative.
-             * If firing a tracking pixel is not required or the pixel url is part of the adm,
-             * leave empty;
-             */
+            * If firing a tracking pixel is not required or the pixel url is part of the adm,
+            * leave empty;
+            */
             var pixelUrl = '';
 
             /* ---------------------------------------------------------------------------------------*/
 
+            curBid = null;
             if (bidIsPass) {
                 //? if (DEBUG) {
                 Scribe.info(__profile.partnerId + ' returned pass for { id: ' + adResponse.id + ' }.');
@@ -343,6 +344,9 @@ function JustPremiumHtb(configs) {
 
             //? if (FEATURES.RETURN_CREATIVE) {
             curReturnParcel.adm = bidCreative;
+            if (pixelUrl) {
+                curReturnParcel.winNotice = __renderPixel.bind(null, pixelUrl);
+            }
             //? }
 
             //? if (FEATURES.RETURN_PRICE) {
@@ -355,7 +359,8 @@ function JustPremiumHtb(configs) {
                 adm: bidCreative,
                 requestId: curReturnParcel.requestId,
                 size: curReturnParcel.size,
-                price: bidDealId ? bidDealId : targetingCpm,
+                price: targetingCpm,
+                dealId: bidDealId || undefined,
                 timeOfExpiry: __profile.features.demandExpiry.enabled ? (__profile.features.demandExpiry.value + System.now()) : 0,
                 auxFn: __renderPixel,
                 auxArgs: [pixelUrl]
@@ -387,7 +392,7 @@ function JustPremiumHtb(configs) {
             partnerId: 'JustPremiumHtb', // PartnerName
             namespace: 'JustPremiumHtb', // Should be same as partnerName
             statsId: 'JUSTP', // Unique partner identifier
-            version: '2.1.0',
+            version: '2.1.1',
             targetingType: 'slot',
             enabledAnalytics: {
                 requestTime: true
