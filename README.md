@@ -391,7 +391,7 @@ It will be called with the paramter `pixelUrl` that needs to be filled out in `_
 In this step, you will be required to fill out the exports file for your module. This file will contain all of the functions that will need to be exposed to outside page if they need to be accessed outside of the wrapper. In the usual case, all you will need to change in this file is your partner module's name in the included snippet:
 
 ```javascript
-shellInterface.JustPremiumHtb= { //shell interface is the window variable that is accessable through the window object, currently this will always be window.headertag
+shellInterface.JustPremiumHtb = { //shell interface is the window variable that is accessable through the window object, currently this will always be window.headertag
     render: SpaceCamp.services.RenderService.renderDfpAd.bind(null, 'JustPremiumHtb')
 };
 ```
@@ -402,7 +402,7 @@ If your module requires using a custom adResponse callback via Partner.CallbackT
 
 ```javascript
 if (__directInterface.Layers.PartnersLayer.Partners.JustPremiumHtb) {
-    shellInterface.JustPremiumHtb= shellInterface.JustPremiumHtb|| {};
+    shellInterface.JustPremiumHtb = shellInterface.JustPremiumHtb || {};
     shellInterface.JustPremiumHtb.adResponseCallback = __directInterface.Layers.PartnersLayer.Partners.JustPremiumHtb.adResponseCallback;
 }
 ```
@@ -411,7 +411,7 @@ If your module requires using a custom adResponse callback via Partner.CallbackT
 
 ```javascript
 if (__directInterface.Layers.PartnersLayer.Partners.JustPremiumHtb) {
-    shellInterface.JustPremiumHtb= shellInterface.JustPremiumHtb|| {};
+    shellInterface.JustPremiumHtb = shellInterface.JustPremiumHtb || {};
     shellInterface.JustPremiumHtb.adResponseCallbacks = __directInterface.Layers.PartnersLayer.Partners.JustPremiumHtb.adResponseCallbacks;
 }
 ```
