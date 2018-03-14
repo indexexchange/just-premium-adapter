@@ -147,12 +147,9 @@ describe('generateRequestObj', function () {
                         type: 'integer',
                         minLength: 2
                     },
-                    c: {
+                    json: {
                         type: 'string',
                         minLength: 2
-                    },
-                    zones: {
-                        type: 'string'
                     },
                     i: {
                         type: 'integer',
@@ -164,65 +161,6 @@ describe('generateRequestObj', function () {
             expect(result.valid).to.be.true;
         });
 
-        it('should correctly prepare pub conditions', function () {
-
-            var conditions = partnerModule.preparePubCond(returnParcels.map(function (parcel) {
-                return parcel.xSlotRef;
-            }));
-
-            var result = inspector.validate({
-                "type": 'object',
-                "properties": {
-                    '*': {
-                        "properties": {
-                            "type": 'integer',
-                            "eq": 1
-                        }
-                    }
-                }
-            }, conditions);
-
-            expect(result.valid).to.be.true;
-
-            var conditions2 = partnerModule.preparePubCond([
-                {
-                    zoneId: 1163,
-                    allow: ['lb']
-                },
-                {
-                    zoneId: 1163,
-                    allow: ['wp']
-                }
-            ]);
-
-            var result2 = inspector.validate({
-                "type": 'object',
-                "properties": {
-                    "1163": {
-                        "type": "array",
-                        "minLength": 2,
-                        "maxLength": 2,
-                        "items": {
-                            "type": "array"
-                        }
-                    }
-                }
-            }, conditions2);
-
-            expect(result2.valid).to.be.true;
-            expect(conditions2['1163'][0][0]).to.be.equal('lb');
-            expect(conditions2['1163'][0][1]).to.be.equal('wp');
-
-            var conditions3 = partnerModule.preparePubCond([
-                {
-                    zoneId: 1163,
-                    exclude: ['lb']
-                }
-            ]);
-
-            expect(conditions3['1163'][0].length).to.be.equal(0);
-            expect(conditions3['1163'][1][0]).to.be.equal('lb');
-        });
         /* -----------------------------------------------------------------------*/
 
         /* ---------- IF MRA, generate a single request for each parcel ---------- */

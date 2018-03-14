@@ -70,13 +70,18 @@ function JustPremiumHtb(configs) {
      * Functions
      * ---------------------------------- */
 
-    function __findBid(params, bids) {
+    function __findBid(parcel, bids) {
+        var params = parcel.xSlotRef;
         for (var zoneId in bids) {
             if (bids.hasOwnProperty(zoneId)) {
                 if (parseInt(params.zoneId) === parseInt(zoneId)) {
                     var len = bids[zoneId].length;
                     while (len--) {
-                        if (__passCond(params, bids[zoneId][len])) {
+                        var bid = bids[zoneId][len];
+                        if (
+                            bid.rid === parcel.requestId &&
+                            __passCond(params, bids[zoneId][len])
+                        ) {
                             return bids[zoneId].splice(len, 1).pop();
                         }
                     }
@@ -101,105 +106,6 @@ function JustPremiumHtb(configs) {
         return true;
     }
 
-    function __arrayUnique(array) {
-        const a = array.concat();
-        for (var i = 0; i < a.length; ++i) {
-            for (var j = i + 1; j < a.length; ++j) {
-                if (a[i] === a[j]) {
-                    a.splice(j--, 1);
-                }
-            }
-        }
-
-        return a;
-    }
-
-    function __preparePubCond(bids) {
-        const cond = {};
-        const count = {};
-
-        bids.forEach(function (bid) {
-            var zone = bid.zoneId;
-
-            if (cond[zone] === 1) {
-                return;
-            }
-
-            const allow = bid.allow || [];
-            const exclude = bid.exclude || [];
-
-            if (allow.length === 0 && exclude.length === 0) {
-                return cond[zone] = 1;
-            }
-
-            cond[zone] = cond[zone] || [[], {}];
-            cond[zone][0] = __arrayUnique(cond[zone][0].concat(allow));
-            exclude.forEach(function (e) {
-                if (!cond[zone][1][e]) {
-                    cond[zone][1][e] = 1;
-                } else cond[zone][1][e]++;
-            });
-            count[zone] = count[zone] || 0;
-            if (exclude.length) count[zone]++;
-        });
-
-        Object.keys(count).forEach(function (zone) {
-            if (cond[zone] === 1) {
-                return;
-            }
-
-            const exclude = [];
-            Object.keys(cond[zone][1]).forEach(function (format) {
-                if (cond[zone][1][format] === count[zone])
-                    exclude.push(format);
-            });
-            cond[zone][1] = exclude;
-        });
-
-        Object.keys(cond).forEach(function (zone) {
-            if (cond[zone] !== 1 && cond[zone][1].length) {
-                cond[zone][0].forEach(function (r) {
-                    var idx = cond[zone][1].indexOf(r);
-                    if (idx > -1) {
-                        cond[zone][1].splice(idx, 1);
-                    }
-                })
-                ;
-                cond[zone][0].length = 0;
-            }
-
-            if (cond[zone] !== 1 && !cond[zone][0].length && !cond[zone][1].length) cond[zone] = 1;
-        });
-
-        return cond;
-    }
-
-    function __requestResource(tagSrc) {
-        var window = Browser.topWindow;
-        var jptScript = window.document.createElement('script');
-        jptScript.type = 'text/javascript';
-        jptScript.async = true;
-        jptScript.src = tagSrc;
-
-        var elToAppend = window.document.getElementsByTagName('head');
-        elToAppend = elToAppend.length ? elToAppend : window.document.getElementsByTagName('body');
-        if (elToAppend.length) {
-            elToAppend = elToAppend[0];
-            elToAppend.insertBefore(jptScript, elToAppend.firstChild);
-        }
-    }
-
-    function __readCookie(name) {
-        const nameEQ = name + '=';
-        const ca = Browser.topWindow.document.cookie.split(';');
-        for (var i = 0; i < ca.length; i++) {
-            var c = ca[i];
-            while (c.charAt(0) == ' ') c = c.substring(1, c.length);
-            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
-        }
-        return null;
-    }
-
     /* Utilities
      * ---------------------------------- */
 
@@ -212,22 +118,11 @@ function JustPremiumHtb(configs) {
      * @return {object}
      */
     function __generateRequestObj(returnParcels) {
-        // Load external manager, required to show Justpremium ad
-        const jPAM = Browser.topWindow.top.jPAM = Browser.topWindow.jPAM || {};
-        if (!jPAM.requested) {
-            var jsVer = __readCookie('jpxhbjs');
-            __requestResource(Browser.getProtocol() + '//cdn-cf.justpremium.com/js/' + (jsVer ? jsVer + '/' : '') + 'jpx.js');
-            jPAM.requested = true;
-        }
 
         var callbackId = System.generateUniqueId();
         var queryObj = {};
-        var zones = [];
 
         var baseUrl = Browser.getProtocol() + '//pre.ads.justpremium.com/v/2.0/t/ie';
-        var cond = __preparePubCond(returnParcels.map(function (parcel) {
-            return parcel.xSlotRef;
-        }));
 
         /* ---------------- Craft bid request using the above returnParcels --------- */
         queryObj.hostname = Browser.getHostname();
@@ -236,14 +131,15 @@ function JustPremiumHtb(configs) {
         queryObj.sh = Browser.getScreenHeight();
         queryObj.ww = Browser.getViewportWidth();
         queryObj.wh = Browser.getViewportHeight();
-        queryObj.i = (+new Date());
-        returnParcels.forEach(function (parcel) {
-            if (zones.indexOf(parseInt(parcel.xSlotRef.zoneId)) < 0) {
-                zones.push(parseInt(parcel.xSlotRef.zoneId));
+        queryObj.json = JSON.stringify(returnParcels.map(function (parcel) {
+            return {
+                rid: parcel.requestId,
+                zid: parcel.xSlotRef.zoneId,
+                al: parcel.xSlotRef.allow,
+                ex: parcel.xSlotRef.exclude
             }
-        });
-        queryObj.zones = zones.join(',');
-        queryObj.c = JSON.stringify(cond);
+        }));
+        queryObj.i = (+new Date());
 
         /* -------------------------------------------------------------------------- */
 
@@ -270,6 +166,7 @@ function JustPremiumHtb(configs) {
         var callbackId = 0;
         __baseClass._adResponseStore[callbackId] = adResponse;
     }
+
     /* -------------------------------------------------------------------------- */
 
     /* Helpers
@@ -312,41 +209,28 @@ function JustPremiumHtb(configs) {
         /* ---------- Process adResponse and extract the bids into the bids array ------------*/
 
         var bids = Utilities.deepCopy(adResponse);
+        var jPAM = Browser.topWindow.jPAM = Browser.topWindow.jPAM || {};
+        jPAM.ie = jPAM.ie || {bids: []};
 
         /* --------------------------------------------------------------------------------- */
 
         for (var j = 0; j < returnParcels.length; j++) {
 
+            var curBid = null;
             var curReturnParcel = returnParcels[j];
-            var sizes = curReturnParcel.xSlotRef.sizes;
-            var curBid;
-            curBid = __findBid(curReturnParcel.xSlotRef, bids);
-
             var headerStatsInfo = {};
             var htSlotId = curReturnParcel.htSlot.getId();
+
             headerStatsInfo[htSlotId] = {};
             headerStatsInfo[htSlotId][curReturnParcel.requestId] = [curReturnParcel.xSlotName];
 
-            /* No matching bid found so its a pass */
-            if (!curBid) {
-                if (__profile.enabledAnalytics.requestTime) {
-                    __baseClass._emitStatsEvent(sessionId, 'hs_slot_pass', headerStatsInfo);
-                }
-                curReturnParcel.pass = true;
-                continue;
+            if (!jPAM.ie.bids.length) {
+                curBid = __findBid(curReturnParcel, bids);
             }
 
-            /* ---------- Fill the bid variables with data from the bid response here. ------------*/
-
-            var bidPrice = curBid.price;
-            var bidSize = sizes && sizes.length ? sizes[0] : [Number(curBid.width), Number(curBid.height)];
-            var bidCreative = curBid.adm;
-            var bidDealId = curBid.dealid;
-            var bidIsPass = bidPrice <= 0;
-            var pixelUrl = '';
-            /* ---------------------------------------------------------------------------------------*/
-
-            if (bidIsPass) {
+            var bidPrice = curBid && curBid.price || 0;
+            /* No matching bid found or price is 0 so its a pass */
+            if (!curBid || parseFloat(bidPrice) <= 0) {
                 //? if (DEBUG) {
                 Scribe.info(__profile.partnerId + ' returned pass for { id: ' + adResponse.id + ' }.');
                 //? }
@@ -356,6 +240,16 @@ function JustPremiumHtb(configs) {
                 curReturnParcel.pass = true;
                 continue;
             }
+
+            jPAM.ie.bids.push(curBid);
+
+            /* ---------- Fill the bid variables with data from the bid response here. ------------*/
+            var bidSize = [Number(curBid.width), Number(curBid.height)];
+            var bidCreative = curBid.adm;
+            var bidDealId = curBid.dealid;
+            var pixelUrl = '';
+            /* ---------------------------------------------------------------------------------------*/
+
             if (__profile.enabledAnalytics.requestTime) {
                 __baseClass._emitStatsEvent(sessionId, 'hs_slot_bid', headerStatsInfo);
             }
@@ -489,7 +383,6 @@ function JustPremiumHtb(configs) {
          * ---------------------------------- */
 
         //? if (TEST) {
-        preparePubCond: __preparePubCond,
         parseResponse: __parseResponse,
         generateRequestObj: __generateRequestObj,
         adResponseCallback: adResponseCallback

@@ -6,52 +6,22 @@
         "width": 1,
         "price": 2.5,
         "adm": "<script></script>",
-        "format" : "wp"
-      },
-      {
-        "height": 1,
-        "width": 1,
-        "price": 2.0,
-        "adm": "<script></script>",
-        "format" : "lb"
-      },
-      {
-        "height": 1,
-        "width": 1,
-        "price": 1.0,
-        "adm": "<script></script>",
-        "format" : "pa"
+        "format": "wp"
       }
     ]
   },
   "pass": {
     "1163": true
   },
-  "deals" : {
+  "deals": {
     "1163": [
       {
         "height": 1,
         "width": 1,
         "price": 2.5,
         "adm": "<script></script>",
-        "format" : "wp",
+        "format": "wp",
         "dealid": 1111
-      },
-      {
-        "height": 1,
-        "width": 1,
-        "price": 2.0,
-        "adm": "<script></script>",
-        "format" : "lb",
-        "dealid": 1112
-      },
-      {
-        "height": 1,
-        "width": 1,
-        "price": 1.0,
-        "adm": "<script></script>",
-        "format" : "pa",
-        "dealid": 1113
       }
     ]
   }

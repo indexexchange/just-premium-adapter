@@ -20,12 +20,12 @@
 /**
  * Returns an array of parcels based on all of the xSlot/htSlot combinations defined
  * in the partnerConfig (simulates a session in which all of them were requested).
- *
+ * @param {Array} ids
  * @param {object} profile
  * @param {object} partnerConfig
  * @returns []
  */
-function generateReturnParcels(profile, partnerConfig) {
+function generateReturnParcels(ids, profile, partnerConfig) {
     var returnParcels = [];
 
     for (var htSlotName in partnerConfig.mapping) {
@@ -44,7 +44,7 @@ function generateReturnParcels(profile, partnerConfig) {
                     htSlot: htSlot,
                     ref: "",
                     xSlotRef: partnerConfig.xSlots[xSlotName],
-                    requestId: '_' + Date.now()
+                    requestId: ids[i]
                 });
             }
         }
@@ -68,107 +68,113 @@ describe('parseResponse', function () {
     var partnerConfig = require('./support/mockPartnerConfig.json');
     var responseData = require('./support/mockResponseData.json');
     var expect = require('chai').expect;
+    var deepCopy = libraryStubData['utilities.js'].deepCopy;
+    var Browser = libraryStubData['browser.js'];
     /* -------------------------------------------------------------------- */
 
     /* Instantiate your partner module */
     var partnerModule = partnerModule(partnerConfig);
     var partnerProfile = partnerModule.profile;
-
+    var ids = ['_aszqf', '_fd23g', '_2431h'];
     /* Generate dummy return parcels based on MRA partner profile */
+    var returnParcels;
     var result, expectedValue, mockData, returnParcels;
 
     describe('should correctly parse bids:', function () {
+
+        beforeEach(function () {
+            var jPAM = Browser.topWindow.jPAM = Browser.topWindow.jPAM || {};
+            jPAM.ie = jPAM.ie || {bids: []};
+            jPAM.ie.bids.length = 0;
+        });
+
         /* Simple type checking on the returned objects, should always pass */
-        it('each parcel should have the required fields set', function () {
-            returnParcels = generateReturnParcels(partnerModule.profile, partnerConfig);
+        it('parcel for which winning bid was sent should has the required fields set', function () {
+
+            returnParcels = generateReturnParcels(ids, partnerModule.profile, partnerConfig);
 
             /* Get mock response data from our responseData file */
-            mockData = responseData.bid;
+            mockData = deepCopy(responseData.bid);
+            mockData['1163'][0].rid = ids[1];
 
             /* IF SRA, parse all parcels at once */
             if (partnerProfile.architecture) partnerModule.parseResponse(1, mockData, returnParcels);
 
-            for (var i = 0; i < returnParcels.length; i++) {
-
-                var result = inspector.validate({
-                    type: 'object',
-                    properties: {
-                        targetingType: {
-                            type: 'string',
-                            eq: 'slot'
-                        },
-                        targeting: {
-                            type: 'object',
-                            properties: {
-                                [partnerModule.profile.targetingKeys.id]: {
-                                    type: 'array',
-                                    exactLength: 1,
-                                    items: {
-                                        type: 'string',
-                                        minLength: 1
-                                    }
-                                },
-                                [partnerModule.profile.targetingKeys.om]: {
-                                    type: 'array',
-                                    exactLength: 1,
-                                    items: {
-                                        type: 'string',
-                                        minLength: 1
-                                    }
-                                },
-                                pubKitAdId: {
+            var result = inspector.validate({
+                type: 'object',
+                properties: {
+                    targetingType: {
+                        type: 'string',
+                        eq: 'slot'
+                    },
+                    targeting: {
+                        type: 'object',
+                        properties: {
+                            [partnerModule.profile.targetingKeys.id]: {
+                                type: 'array',
+                                exactLength: 1,
+                                items: {
                                     type: 'string',
                                     minLength: 1
                                 }
+                            },
+                            [partnerModule.profile.targetingKeys.om]: {
+                                type: 'array',
+                                exactLength: 1,
+                                items: {
+                                    type: 'string',
+                                    minLength: 1
+                                }
+                            },
+                            pubKitAdId: {
+                                type: 'string',
+                                minLength: 1
                             }
-                        },
-                        price: {
-                            type: 'number'
-                        },
-                        size: {
-                            type: 'array',
-                        },
-                        adm: {
-                            type: 'string',
-                            minLength: 1
                         }
+                    },
+                    price: {
+                        type: 'number'
+                    },
+                    size: {
+                        type: 'array',
+                    },
+                    adm: {
+                        type: 'string',
+                        minLength: 1
                     }
-                }, returnParcels[i]);
+                }
+            }, returnParcels[1]);
 
-                expect(result.valid, result.format()).to.be.true;
-            }
+            expect(result.valid, result.format()).to.be.true;
         });
 
         /* ---------- ADD MORE TEST CASES TO TEST AGAINST REAL VALUES ------------*/
-        it('each parcel should have the correct values set', function () {
-            returnParcels = generateReturnParcels(partnerModule.profile, partnerConfig);
+        it('parcel for which winning bid was sent should has the correct values set', function () {
+            returnParcels = generateReturnParcels(ids, partnerModule.profile, partnerConfig);
 
             /* Get mock response data from our responseData file */
-            mockData = responseData.bid;
+            mockData = deepCopy(responseData.bid);
+            mockData['1163'][0].rid = ids[1];
 
             /* IF SRA, parse all parcels at once */
             if (partnerProfile.architecture) partnerModule.parseResponse(1, mockData, returnParcels);
 
-            var order = [2,0,1];
+            var bid = mockData['1163'][0];
+            expect(returnParcels[1]).to.exist;
+            expect(returnParcels[1].price).to.be.equal(bid.price);
+            expect(returnParcels[1].adm).to.be.equal(bid.adm);
+            expect(returnParcels[1].size[0]).to.be.equal(bid.width);
+            expect(returnParcels[1].size[1]).to.be.equal(bid.height);
 
-            for (var i = 0; i < returnParcels.length; i++) {
-
-                var bid = mockData['1163'][order[i]];
-                expect(returnParcels[i].price).to.be.equal(bid.price);
-                expect(returnParcels[i].adm).to.be.equal(bid.adm);
-                expect(returnParcels[i].size[0]).to.be.equal(bid.width);
-                expect(returnParcels[i].size[1]).to.be.equal(bid.height);
-                expect(returnParcels[i]).to.exist;
-
-            }
         });
         /* -----------------------------------------------------------------------*/
     });
 
     describe('should correctly parse passes: ', function () {
 
+
         it('each parcel should have the required fields set', function () {
-            returnParcels = generateReturnParcels(partnerModule.profile, partnerConfig);
+            returnParcels = generateReturnParcels(ids, partnerModule.profile, partnerConfig);
 
             /* Get mock response data from our responseData file */
             mockData = responseData.pass;
@@ -195,7 +201,7 @@ describe('parseResponse', function () {
 
         /* ---------- ADD MORE TEST CASES TO TEST AGAINST REAL VALUES ------------*/
         it('each parcel should have the correct values set', function () {
-            returnParcels = generateReturnParcels(partnerModule.profile, partnerConfig);
+            returnParcels = generateReturnParcels(ids, partnerModule.profile, partnerConfig);
 
             /* Get mock response data from our responseData file */
             mockData = responseData.pass;
@@ -214,96 +220,96 @@ describe('parseResponse', function () {
 
     describe('should correctly parse deals: ', function () {
 
+        beforeEach(function () {
+            var jPAM = Browser.topWindow.jPAM = Browser.topWindow.jPAM || {};
+            jPAM.ie = jPAM.ie || {bids: []};
+            jPAM.ie.bids.length = 0;
+        });
+
         /* Simple type checking on the returned objects, should always pass */
-        it('each parcel should have the required fields set', function () {
-            returnParcels = generateReturnParcels(partnerModule.profile, partnerConfig);
+        it('parcel for which winning bid was sent should has the required fields set', function () {
+            returnParcels = generateReturnParcels(ids, partnerModule.profile, partnerConfig);
 
             /* Get mock response data from our responseData file */
-            mockData = responseData.deals;
+            mockData = deepCopy(responseData.deals);
+            mockData['1163'][0].rid = ids[1];
 
             /* IF SRA, parse all parcels at once */
             if (partnerProfile.architecture) partnerModule.parseResponse(1, mockData, returnParcels);
 
-            for (var i = 0; i < returnParcels.length; i++) {
-
-                var result = inspector.validate({
-                    type: 'object',
-                    properties: {
-                        targetingType: {
-                            type: 'string',
-                            eq: 'slot'
-                        },
-                        targeting: {
-                            type: 'object',
-                            properties: {
-                                [partnerModule.profile.targetingKeys.id]: {
-                                    type: 'array',
-                                    exactLength: 1,
-                                    items: {
-                                        type: 'string',
-                                        minLength: 1
-                                    }
-                                },
-                                [partnerModule.profile.targetingKeys.pm]: {
-                                    type: 'array',
-                                    exactLength: 1,
-                                    items: {
-                                        type: 'string',
-                                        minLength: 1
-                                    }
-                                },
-                                [partnerModule.profile.targetingKeys.pmid]: {
-                                    type: 'array',
-                                    exactLength: 1,
-                                    items: {
-                                        type: 'string',
-                                        minLength: 1
-                                    }
-                                },
-                                pubKitAdId: {
+            var result = inspector.validate({
+                type: 'object',
+                properties: {
+                    targetingType: {
+                        type: 'string',
+                        eq: 'slot'
+                    },
+                    targeting: {
+                        type: 'object',
+                        properties: {
+                            [partnerModule.profile.targetingKeys.id]: {
+                                type: 'array',
+                                exactLength: 1,
+                                items: {
                                     type: 'string',
                                     minLength: 1
                                 }
+                            },
+                            [partnerModule.profile.targetingKeys.pm]: {
+                                type: 'array',
+                                exactLength: 1,
+                                items: {
+                                    type: 'string',
+                                    minLength: 1
+                                }
+                            },
+                            [partnerModule.profile.targetingKeys.pmid]: {
+                                type: 'array',
+                                exactLength: 1,
+                                items: {
+                                    type: 'string',
+                                    minLength: 1
+                                }
+                            },
+                            pubKitAdId: {
+                                type: 'string',
+                                minLength: 1
                             }
-                        },
-                        price: {
-                            type: 'number'
-                        },
-                        size: {
-                            type: 'array'
-                        },
-                        adm: {
-                            type: 'string',
-                            minLength: 1
                         }
-                    }
-                }, returnParcels[i]);
+                    },
+                    price: {
+                        type: 'number'
+                    },
+                    size: {
+                        type: 'array',
+                    },
+                    adm: {
+                        type: 'string',
+                        minLength: 1
+                    },
+                }
+            }, returnParcels[1]);
 
-                expect(result.valid, result.format()).to.be.true;
-            }
+            expect(result.valid, result.format()).to.be.true;
         });
 
         /* ---------- ADD MORE TEST CASES TO TEST AGAINST REAL VALUES ------------*/
-        it('each parcel should have the correct values set', function () {
-            returnParcels = generateReturnParcels(partnerModule.profile, partnerConfig);
+        it('parcel for which winning bid was sent should has the correct values set', function () {
+            returnParcels = generateReturnParcels(ids, partnerModule.profile, partnerConfig);
 
             /* Get mock response data from our responseData file */
-            mockData = responseData.deals;
+            mockData = deepCopy(responseData.deals);
+            mockData['1163'][0].rid = ids[1];
 
             /* IF SRA, parse all parcels at once */
             if (partnerProfile.architecture) partnerModule.parseResponse(1, mockData, returnParcels);
 
-            var order = [2,0,1];
-
-            for (var i = 0; i < returnParcels.length; i++) {
-
-                var bid = mockData['1163'][order[i]];
-                expect(returnParcels[i].price).to.be.equal(bid.price);
-                expect(returnParcels[i].adm).to.be.equal(bid.adm);
-                expect(returnParcels[i].size[0]).to.be.equal(bid.width);
-                expect(returnParcels[i].size[1]).to.be.equal(bid.height);
-                expect(returnParcels[i]).to.exist;
-            }
+            var bid = mockData['1163'][0];
+            expect(returnParcels[1]).to.exist;
+            expect(returnParcels[1].price).to.be.equal(bid.price);
+            expect(returnParcels[1].adm).to.be.equal(bid.adm);
+            expect(returnParcels[1].size[0]).to.be.equal(bid.width);
+            expect(returnParcels[1].size[1]).to.be.equal(bid.height);
         });
         /* -----------------------------------------------------------------------*/
     });
