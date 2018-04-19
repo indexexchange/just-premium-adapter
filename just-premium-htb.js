@@ -70,6 +70,42 @@ function JustPremiumHtb(configs) {
      * Functions
      * ---------------------------------- */
 
+    function __findBid(parcel, bids) {
+        var params = parcel.xSlotRef;
+        for (var zoneId in bids) {
+            if (bids.hasOwnProperty(zoneId)) {
+                if (parseInt(params.zoneId) === parseInt(zoneId)) {
+                    var len = bids[zoneId].length;
+                    while (len--) {
+                        var bid = bids[zoneId][len];
+                        if (
+                            bid.rid === parcel.requestId &&
+                            __passCond(params, bids[zoneId][len])
+                        ) {
+                            return bids[zoneId].splice(len, 1).pop();
+                        }
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    function __passCond(params, bid) {
+        var format = bid.format;
+
+        if (params.allow && params.allow.length) {
+            return params.allow.indexOf(format) > -1;
+        }
+
+        if (params.exclude && params.exclude.length) {
+            return params.exclude.indexOf(format) < 0;
+        }
+
+        return true;
+    }
+
     /* Utilities
      * ---------------------------------- */
 
@@ -83,72 +119,27 @@ function JustPremiumHtb(configs) {
      */
     function __generateRequestObj(returnParcels) {
 
-        /* =============================================================================
-         * STEP 2  | Generate Request URL
-         * -----------------------------------------------------------------------------
-         *
-         * Generate the URL to request demand from the partner endpoint using the provided
-         * returnParcels. The returnParcels is an array of objects each object containing
-         * an .xSlotRef which is a reference to the xSlot object from the partner configuration.
-         * Use this to retrieve the placements/xSlots you need to request for.
-         *
-         * If your partner is MRA, returnParcels will be an array of length one. If your
-         * partner is SRA, it will contain any number of entities. In any event, the full
-         * contents of the array should be able to fit into a single request and the
-         * return value of this function should similarly represent a single request to the
-         * endpoint.
-         *
-         * Return an object containing:
-         * queryUrl: the url for the request
-         * data: the query object containing a map of the query string paramaters
-         *
-         * callbackId:
-         *
-         * arbitrary id to match the request with the response in the callback function. If
-         * your endpoint supports passing in an arbitrary ID and returning it as part of the response
-         * please use the callbackType: Partner.CallbackTypes.ID and fill out the adResponseCallback.
-         * Also please provide this adResponseCallback to your bid request here so that the JSONP
-         * response calls it once it has completed.
-         *
-         * If your endpoint does not support passing in an ID, simply use
-         * Partner.CallbackTypes.CALLBACK_NAME and the wrapper will take care of handling request
-         * matching by generating unique callbacks for each request using the callbackId.
-         *
-         * If your endpoint is ajax only, please set the appropriate values in your profile for this,
-         * i.e. Partner.CallbackTypes.NONE and Partner.Requesttypes.AJAX. You also do not need to provide
-         * a callbackId in this case because there is no callback.
-         *
-         * The return object should look something like this:
-         * {
-         *     url: 'http://bidserver.com/api/bids' // base request url for a GET/POST request
-         *     data: { // query string object that will be attached to the base url
-         *        slots: [
-         *             {
-         *                 placementId: 54321,
-         *                 sizes: [[300, 250]]
-         *             },{
-         *                 placementId: 12345,
-         *                 sizes: [[300, 600]]
-         *             },{
-         *                 placementId: 654321,
-         *                 sizes: [[728, 90]]
-         *             }
-         *         ],
-         *         site: 'http://google.com'
-         *     },
-         *     callbackId: '_23sd2ij4i1' //unique id used for pairing requests and responses
-         * }
-         */
-
-        /* ---------------------- PUT CODE HERE ------------------------------------ */
-        var queryObj = {};
         var callbackId = System.generateUniqueId();
+        var queryObj = {};
 
-        /* Change this to your bidder endpoint.*/
-        var baseUrl = Browser.getProtocol() + '//someAdapterEndpoint.com/bid';
+        var baseUrl = Browser.getProtocol() + '//pre.ads.justpremium.com/v/2.0/t/ie';
 
         /* ---------------- Craft bid request using the above returnParcels --------- */
-
+        queryObj.hostname = Browser.getHostname();
+        queryObj.protocol = Browser.getProtocol().replace(':', '');
+        queryObj.sw = Browser.getScreenWidth();
+        queryObj.sh = Browser.getScreenHeight();
+        queryObj.ww = Browser.getViewportWidth();
+        queryObj.wh = Browser.getViewportHeight();
+        queryObj.json = JSON.stringify(returnParcels.map(function (parcel) {
+            return {
+                rid: parcel.requestId,
+                zid: parcel.xSlotRef.zoneId,
+                al: parcel.xSlotRef.allow,
+                ex: parcel.xSlotRef.exclude
+            }
+        }));
+        queryObj.i = (+new Date());
 
         /* -------------------------------------------------------------------------- */
 
@@ -214,101 +205,31 @@ function JustPremiumHtb(configs) {
      */
     function __parseResponse(sessionId, adResponse, returnParcels) {
 
-
-        /* =============================================================================
-         * STEP 4  | Parse & store demand response
-         * -----------------------------------------------------------------------------
-         *
-         * Fill the below variables with information about the bid from the partner, using
-         * the adResponse variable that contains your module adResponse.
-         */
-
-        /* This an array of all the bids in your response that will be iterated over below. Each of
-         * these will be mapped back to a returnParcel object using some criteria explained below.
-         * The following variables will also be parsed and attached to that returnParcel object as
-         * returned demand.
-         *
-         * Use the adResponse variable to extract your bid information and insert it into the
-         * bids array. Each element in the bids array should represent a single bid and should
-         * match up to a single element from the returnParcel array.
-         *
-         */
-
         /* ---------- Process adResponse and extract the bids into the bids array ------------*/
 
-        var bids = adResponse;
+        var bids = Utilities.deepCopy(adResponse);
+        var jPAM = Browser.topWindow.jPAM = Browser.topWindow.jPAM || {};
+        jPAM.ie = jPAM.ie || {bids: []};
 
         /* --------------------------------------------------------------------------------- */
 
         for (var j = 0; j < returnParcels.length; j++) {
 
+            var curBid = null;
             var curReturnParcel = returnParcels[j];
-
             var headerStatsInfo = {};
             var htSlotId = curReturnParcel.htSlot.getId();
+
             headerStatsInfo[htSlotId] = {};
             headerStatsInfo[htSlotId][curReturnParcel.requestId] = [curReturnParcel.xSlotName];
 
-            var curBid;
-
-            for (var i = 0; i < bids.length; i++) {
-
-                /**
-                 * This section maps internal returnParcels and demand returned from the bid request.
-                 * In order to match them correctly, they must be matched via some criteria. This
-                 * is usually some sort of placements or inventory codes. Please replace the someCriteria
-                 * key to a key that represents the placement in the configuration and in the bid responses.
-                 */
-
-                /* ----------- Fill this out to find a matching bid for the current parcel ------------- */
-                if (curReturnParcel.xSlotRef.someCriteria === bids[i].someCriteria) {
-                    curBid = bids[i];
-                    bids.splice(i, 1);
-                    break;
-                }
+            if (!jPAM.ie.bids.length) {
+                curBid = __findBid(curReturnParcel, bids);
             }
 
-            /* No matching bid found so its a pass */
-            if (!curBid) {
-                if (__profile.enabledAnalytics.requestTime) {
-                    __baseClass._emitStatsEvent(sessionId, 'hs_slot_pass', headerStatsInfo);
-                }
-                curReturnParcel.pass = true;
-                continue;
-            }
-
-            /* ---------- Fill the bid variables with data from the bid response here. ------------*/
-
-            /* Using the above variable, curBid, extract various information about the bid and assign it to
-             * these local variables */
-
-            /* the bid price for the given slot */
-            var bidPrice = curBid.price;
-
-            /* the size of the given slot */
-            var bidSize = [Number(curBid.width), Number(curBid.height)];
-
-            /* the creative/adm for the given slot that will be rendered if is the winner.
-             * Please make sure the URL is decoded and ready to be document.written.
-             */
-            var bidCreative = curBid.adm;
-
-            /* the dealId if applicable for this slot. */
-            var bidDealId = curBid.dealid;
-
-            /* explicitly pass */
-            var bidIsPass = bidPrice <= 0 ? true : false;
-
-            /* OPTIONAL: tracking pixel url to be fired AFTER rendering a winning creative.
-            * If firing a tracking pixel is not required or the pixel url is part of the adm,
-            * leave empty;
-            */
-            var pixelUrl = '';
-
-            /* ---------------------------------------------------------------------------------------*/
-
-            curBid = null;
-            if (bidIsPass) {
+            var bidPrice = curBid && curBid.price || 0;
+            /* No matching bid found or price is 0 so its a pass */
+            if (!curBid || parseFloat(bidPrice) <= 0) {
                 //? if (DEBUG) {
                 Scribe.info(__profile.partnerId + ' returned pass for { id: ' + adResponse.id + ' }.');
                 //? }
@@ -318,6 +239,15 @@ function JustPremiumHtb(configs) {
                 curReturnParcel.pass = true;
                 continue;
             }
+
+            jPAM.ie.bids.push(curBid);
+
+            /* ---------- Fill the bid variables with data from the bid response here. ------------*/
+            var bidSize = [Number(curBid.width), Number(curBid.height)];
+            var bidCreative = curBid.adm;
+            var bidDealId = curBid.dealid;
+            var pixelUrl = '';
+            /* ---------------------------------------------------------------------------------------*/
 
             if (__profile.enabledAnalytics.requestTime) {
                 __baseClass._emitStatsEvent(sessionId, 'hs_slot_bid', headerStatsInfo);
@@ -380,13 +310,6 @@ function JustPremiumHtb(configs) {
         EventsService = SpaceCamp.services.EventsService;
         RenderService = SpaceCamp.services.RenderService;
 
-        /* =============================================================================
-         * STEP 1  | Partner Configuration
-         * -----------------------------------------------------------------------------
-         *
-         * Please fill out the below partner profile according to the steps in the README doc.
-         */
-
         /* ---------- Please fill out this partner profile according to your module ------------*/
         __profile = {
             partnerId: 'JustPremiumHtb', // PartnerName
@@ -413,11 +336,11 @@ function JustPremiumHtb(configs) {
                 pm: 'ix_justp_cpm',
                 pmid: 'ix_justp_dealid'
             },
-            bidUnitInCents: 1, // The bid price unit (in cents) the endpoint returns, please refer to the readme for details
+            bidUnitInCents: 100, // The bid price unit (in cents) the endpoint returns, please refer to the readme for details
             lineItemType: Constants.LineItemTypes.ID_AND_SIZE,
-            callbackType: Partner.CallbackTypes.ID, // Callback type, please refer to the readme for details
-            architecture: Partner.Architectures.SRA, // Request architecture, please refer to the readme for details
-            requestType: Partner.RequestTypes.ANY // Request type, jsonp, ajax, or any.
+            callbackType: Partner.CallbackTypes.NONE, // Callback type, please refer to the readme for details
+            architecture: Partner.Architectures.FSRA, // Request architecture, please refer to the readme for details
+            requestType: Partner.RequestTypes.AJAX // Request type, jsonp, ajax, or any.
         };
         /* ---------------------------------------------------------------------------------------*/
 

@@ -1,5 +1,40 @@
 {
-    "bid": [],
-    "pass": [],
-    "deals": []
+  "bid": {
+    "1163": [
+      {
+        "height": 1,
+        "width": 1,
+        "price": 2.5,
+        "adm": "<script></script>",
+        "format": "wp"
+      }
+    ]
+  },
+  "pass": {
+    "1163": true
+  },
+  "deals": {
+    "1163": [
+      {
+        "height": 1,
+        "width": 1,
+        "price": 2.5,
+        "adm": "<script></script>",
+        "format": "wp",
+        "dealid": 1111
+      }
+    ]
+  },
+  "dealid": {
+    "1163": [
+      {
+        "height": 1,
+        "width": 1,
+        "price": 2.5,
+        "adm": "<script></script>",
+        "format": "wp",
+        "dealid": 1111
+      }
+    ]
+  }
 }

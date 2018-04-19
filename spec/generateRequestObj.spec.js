@@ -108,23 +108,62 @@ describe('generateRequestObj', function () {
         });
 
         /* Test that the generateRequestObj function creates the correct object by building a URL
-            * from the results. This is the bid request url the wrapper will send out to get demand
-            * for your module.
-            *
-            * The url should contain all the necessary parameters for all of the request parcels
-            * passed into the function.
-            */
+         * from the results. This is the bid request url the wrapper will send out to get demand
+         * for your module.
+         *
+         * The url should contain all the necessary parameters for all of the request parcels
+         * passed into the function.
+         */
 
         /* ---------- ADD MORE TEST CASES TO TEST AGAINST REAL VALUES ------------*/
         it('should correctly build a url', function () {
             /* Write unit tests to verify that your bid request url contains the correct
-                * request params, url, etc.
-                */
-            expect(requestObject).to.exist;
+             * request params, url, etc.
+             */
+            var result = inspector.validate({
+                type: 'object',
+                properties: {
+                    hostname: {
+                        type: 'string',
+                        minLength: 1
+                    },
+                    protocol: {
+                        type: 'string',
+                        minLength: 4
+                    },
+                    sw: {
+                        type: 'integer',
+                        minLength: 2
+                    },
+                    sh: {
+                        type: 'integer',
+                        minLength: 2
+                    },
+                    ww: {
+                        type: 'integer',
+                        minLength: 2
+                    },
+                    wh: {
+                        type: 'integer',
+                        minLength: 2
+                    },
+                    json: {
+                        type: 'string',
+                        minLength: 2
+                    },
+                    i: {
+                        type: 'integer',
+                        minLength: 13
+                    }
+                }
+            }, requestObject.data);
+
+            expect(result.valid).to.be.true;
         });
+
         /* -----------------------------------------------------------------------*/
 
-    /* ---------- IF MRA, generate a single request for each parcel ---------- */
+        /* ---------- IF MRA, generate a single request for each parcel ---------- */
     } else {
         for (var i = 0; i < returnParcels.length; i++) {
             requestObject = partnerModule.generateRequestObj([returnParcels[i]]);
@@ -153,18 +192,18 @@ describe('generateRequestObj', function () {
             });
 
             /* Test that the generateRequestObj function creates the correct object by building a URL
-                * from the results. This is the bid request url that wrapper will send out to get demand
-                * for your module.
-                *
-                * The url should contain all the necessary parameters for all of the request parcels
-                * passed into the function.
-                */
+             * from the results. This is the bid request url that wrapper will send out to get demand
+             * for your module.
+             *
+             * The url should contain all the necessary parameters for all of the request parcels
+             * passed into the function.
+             */
 
             /* ---------- ADD MORE TEST CASES TO TEST AGAINST REAL VALUES ------------*/
             it('should correctly build a url', function () {
                 /* Write unit tests to verify that your bid request url contains the correct
-                    * request params, url, etc.
-                    */
+                 * request params, url, etc.
+                 */
                 expect(requestObject).to.exist;
             });
             /* -----------------------------------------------------------------------*/
