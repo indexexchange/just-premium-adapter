@@ -83,7 +83,8 @@ function JustPremiumHtb(configs) {
                             bid.rid === parcel.requestId &&
                             __passCond(params, bids[zoneId][len])
                         ) {
-                            return bids[zoneId].splice(len, 1).pop();
+                            var selectedBid = bids[zoneId].splice(len, 1);
+                            return selectedBid.length ? selectedBid[0] : null;
                         }
                     }
                 }
@@ -125,7 +126,6 @@ function JustPremiumHtb(configs) {
 
         var baseUrl = Browser.getProtocol() + '//pre.ads.justpremium.com/v/2.0/t/ie';
         var gdprStatus = ComplianceService.gdpr.getConsent();
-        var privacyEnabled = ComplianceService.isPrivacyEnabled();
         /* ---------------- Craft bid request using the above returnParcels --------- */
         queryObj.hostname = Browser.getHostname();
         queryObj.protocol = Browser.getProtocol().replace(':', '');
@@ -133,6 +133,7 @@ function JustPremiumHtb(configs) {
         queryObj.sh = Browser.getScreenHeight();
         queryObj.ww = Browser.getViewportWidth();
         queryObj.wh = Browser.getViewportHeight();
+        queryObj.cs = gdprStatus.applies ? (gdprStatus.consentString || '1') : '0';
         queryObj.json = JSON.stringify(returnParcels.map(function (parcel) {
             return {
                 rid: parcel.requestId,
@@ -141,7 +142,7 @@ function JustPremiumHtb(configs) {
                 ex: parcel.xSlotRef.exclude
             }
         }));
-        queryObj.i = (+new Date());
+        queryObj.i = System.now();
 
         /* -------------------------------------------------------------------------- */
 
@@ -210,7 +211,6 @@ function JustPremiumHtb(configs) {
 
         /* ---------- Process adResponse and extract the bids into the bids array ------------*/
 
-        var bids = Utilities.deepCopy(adResponse);
         var jPAM = Browser.topWindow.jPAM = Browser.topWindow.jPAM || {};
         jPAM.ie = jPAM.ie || {bids: []};
 
@@ -227,7 +227,7 @@ function JustPremiumHtb(configs) {
             headerStatsInfo[htSlotId][curReturnParcel.requestId] = [curReturnParcel.xSlotName];
 
             if (!jPAM.ie.bids.length) {
-                curBid = __findBid(curReturnParcel, bids);
+                curBid = __findBid(curReturnParcel, adResponse);
             }
 
             var bidPrice = curBid && curBid.price || 0;
