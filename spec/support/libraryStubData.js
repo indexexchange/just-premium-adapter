@@ -106,6 +106,19 @@ var libraryStubData = {
     'space-camp.js': {
         NAMESPACE: 'headertag',
         services: {
+            ComplianceService: {
+                gdpr: {
+                    getConsent: function () {
+                        return {
+                            applies: true,
+                            consentString: 'BOQ7WlgOQ7WlgABABwAAABJOACgACAAQABA'
+                        }
+                    }
+                },
+                isPrivacyEnabled: function () {
+                    return true;
+                }
+            },
             EventsService: {
                 emit: function (eventName, data) {
                     return;
