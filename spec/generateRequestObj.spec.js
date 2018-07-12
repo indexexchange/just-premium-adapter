@@ -151,6 +151,10 @@ describe('generateRequestObj', function () {
                         type: 'string',
                         minLength: 2
                     },
+                    cs: {
+                        type: 'string',
+                        minLength: 1
+                    },
                     i: {
                         type: 'integer',
                         minLength: 13

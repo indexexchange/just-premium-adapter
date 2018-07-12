@@ -187,9 +187,11 @@ describe('parseResponse', function () {
             mockData['1163'][0].rid = ids[1];
 
             /* IF SRA, parse all parcels at once */
-            if (partnerProfile.architecture) partnerModule.parseResponse(1, mockData, returnParcels);
+            if (partnerProfile.architecture) partnerModule.parseResponse(1, deepCopy(mockData), returnParcels);
+
 
             var bid = mockData['1163'][0];
+
             expect(returnParcels[1]).to.exist;
             expect(returnParcels[1].price).to.be.equal(bid.price);
             expect(returnParcels[1].adm).to.be.equal(bid.adm);
@@ -389,7 +391,7 @@ describe('parseResponse', function () {
             mockData['1163'][0].rid = ids[1];
 
             /* IF SRA, parse all parcels at once */
-            if (partnerProfile.architecture) partnerModule.parseResponse(1, mockData, returnParcels);
+            if (partnerProfile.architecture) partnerModule.parseResponse(1, deepCopy(mockData), returnParcels);
 
             var bid = mockData['1163'][0];
             expect(returnParcels[1]).to.exist;
