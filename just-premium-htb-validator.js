@@ -55,13 +55,6 @@ var partnerValidator = function (configs) {
                                 type: 'array',
                                 optional: true,
                                 items: {type: 'string'}
-                            },
-                            sizes: {
-                                type: 'array',
-                                items: {
-                                    type: 'array',
-                                    items: {type: 'integer'}
-                                }
                             }
                         }
                     }
